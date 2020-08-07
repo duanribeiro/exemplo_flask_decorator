@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}User Editing / Addition{% endblock %}
+
+{% block head %}
+    <script src="/static/vue.js"></script>
+    <script type="text/javascript" src="/static/robotmarketdata.js"></script>
+
+    <script type="text/javascript">
+        window.onload = function () {
+            app_user_data = new SimpleApplyConfig({
+                el: '#div_user_data',
+                delimiters: ["[[","]]"],
+                data: {
+                    username: '{{ username| safe }}',
+                    password: '',
+                    confirm_pwd: '',
+                    form: {                        
+                    },
+                },
+                watch: {
+                    'form.password': function(val) {
+                        if (this.form.errors.password && val) {
+                            this.form.errors.password = '';
+                            this.form.errors.confirm_pwd = '';
+                        }
+                    },
+                    'form.confirm_pwd': function(val) {
+                        if (this.form.errors.confirm_pwd && val) {
+                            this.form.errors.password = '';
+                            this.form.errors.confirm_pwd = '';
+                        }
+                    },
+                },
+                mounted() {
+                    this.form = {
+                        username: this.username || '',
+                        password: this.password || '', 
+                        confirm_pwd: this.confirm_pwd || '',
+                        errors: {
+                        },
+                    };
+                    this.reset_form_errors();
+                },
+                methods: {
+                    reset_form_errors() {
+                        this.form.errors = {
+                            username: '',
+                            password: '',
+                            confirm_pwd: '',
+                        }
+                    },
+                    validateFullData() {
+                        if (!this.form.username) {
+                            this.form.errors.username = 'Please fill out this field.';
+                            return false;
+                        }
+
+                        if (!this.form.password) {
+                            this.form.errors.password = 'Please fill out this field.';
+                            return false;
+                        }
+
+                        if (!this.form.confirm_pwd) {
+                            this.form.errors.confirm_pwd = 'Please fill out this field.';
+                            return false;
+                        }
+
+                        if (this.form.password !== this.form.confirm_pwd) {
+                            this.form.errors.password = 'Please make sure your passwords match.';
+                            this.form.errors.confirm_pwd = this.form.errors.password;
+                            this.form.password = '';
+                            this.form.confirm_pwd = '';
+                            return false;
+                        }
+
+                        return true;
+                    },
+                    submitSaving() {
+                        this.reset_form_errors();
+                        if (!this.validateFullData()) {
+                            return;
+                        }
+
+                        let url = '/auth/user_pwd_save'
+                        let data = JSON.stringify({'data': this.form,})
+                        let error_msg = 'ops...! An error has occurred on Saving User Password PUT call!'
+                        submitData(url, data, error_msg, this.reload)
+                    },
+                    reload: function() {
+                        window.location.href = "/auth/user_editing/" + this.form.username
+                    },
+                    cancelSubmit() {
+                        this.reload()
+                    },
+                },
+            });
+        }
+    </script>
+
+    <style type="text/css">
+        html,body{
+            background-size: cover;
+            background-repeat: no-repeat;
+            height: 100%;
+            font-family: 'Numans', sans-serif;
+        }
+
+        .container{
+            height: 100%;
+            align-content: center;
+        }
+
+        .card{
+            height: min-content;
+            margin-top: auto;
+            margin-bottom: auto;
+            width: 480px;
+            background-color: rgba(0,0,0,0.5) !important;
+        }
+
+        .social_icon span{
+            font-size: 60px;
+            margin-left: 10px;
+            color: #FFC312;
+        }
+
+        .social_icon span:hover{
+            color: white;
+            cursor: pointer;
+        }
+
+        .card-header h3{
+            color: white;
+        }
+
+        .social_icon{
+            position: absolute;
+            right: 20px;
+            top: -45px;
+        }
+
+        .input-group-prepend span{
+            width: 50px;
+            background-color: #333;
+            color: black;
+            border:0 !important;
+        }
+
+        input:focus{
+            outline: 0 0 0 0  !important;
+            box-shadow: 0 0 0 0 !important;
+
+        }
+
+        .remember{
+            color: white;
+        }
+
+        .remember input
+        {
+            width: 20px;
+            height: 20px;
+            margin-left: 15px;
+            margin-right: 5px;
+        }
+
+        .login_btn{
+            color: black;
+            background-color: #FFC312;
+            width: 100px;
+        }
+
+        .login_btn:hover{
+            color: black;
+            background-color: white;
+        }
+
+        .links{
+            color: white;
+        }
+
+        .links a{
+            margin-left: 4px;
+        } 
+
+        input {
+            background: #FF9E2A !important;
+        }
+
+        .card-header {
+            background: transparent !important;
+        }
+
+        ::placeholder { /* Firefox, Chrome, Opera */ 
+            color: #888 !important; 
+        }        
+    </style>    
+{% endblock %}
+
+{% block main %}
+    <div class="container">
+        <div class="d-flex justify-content-center h-480" id="div_user_data">
+            <div class="card">
+                <div class="card-header">
+                    <h5 style="color:#FF9E2A">Change the user's password</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        <div class="input-group form-group">
+                            <div class="input-group-prepend w-50">
+                                <span class="input-group-text w-100 text-center text-white">Password:</span>
+                            </div>
+                            <input type="password" v-model="form.password" name="pwd" class="input border-0 text-center bg-orange" placeholder="Type the password">
+                            <template v-if="Object.keys(form).length > 0">
+                                <span class="text-danger" v-if="form.errors.password && !form.password" v-text="form.errors.password"></span>
+                            </template>
+                        </div>
+                        <div class="input-group form-group">
+                            <div class="input-group-prepend w-50">
+                                <span class="input-group-text w-100 text-center text-white">Password Confirmation:</span>
+                            </div>
+                            <input type="password" v-model="form.confirm_pwd" name="pwd" class="input border-0 text-center bg-orange" placeholder="Confirm the password">
+                            <template v-if="Object.keys(form).length > 0">
+                                <span class="text-danger" v-if="form.errors.confirm_pwd && !form.confirm_pwd" v-text="form.errors.confirm_pwd"></span>
+                            </template>
+                        </div>
+                        <div class="form-group mt-4">
+                            <button type="button" v-on:click="submitSaving()" class="btn float-right login_btn bg-orange">
+                                Change
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <button type="button" v-on:click="cancelSubmit()" class="btn float-right login_btn mr-3 bg-orange">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script_eof %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            /*
+                Nothing to put here!
+            */
+        });
+    </script>
+{% endblock %}

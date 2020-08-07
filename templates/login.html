@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Page - Robot FX</title>
+   <!--Made with love by Mutiullah Samim -->
+
+    <script src="/static/jquery-3.4.1.min.js"></script>
+    <script src="/static/popper.min.js"></script>
+    <script src="/static/jquery.redirect.js"></script>
+    <script src="/static/bootstrap.min.js"></script>
+    <script type="text/javascript">
+
+        // Adapted from https://stackoverflow.com/a/21712356
+        function detectIEEdge() {
+            var ua = window.navigator.userAgent;
+            var isIEorEdge = false;
+            var msie = ua.indexOf('MSIE ');
+            if (msie > 0) {
+                isIEorEdge = true;
+            }
+            var trident = ua.indexOf('Trident/');
+            if (trident > 0) {
+                isIEorEdge = true;
+            }
+            var edge = ua.indexOf('Edge/');
+            if (edge > 0) {
+               isIEorEdge = true;
+            }
+            return isIEorEdge;
+        }
+
+        $(document).ready(function() {
+            if (detectIEEdge()) {
+                alert ("Internet Explorer and Microsoft Edge are not supported by this application.");
+                $("#login_btn").prop("disabled", true);
+            }
+
+            {% if login_error_msg %}
+                // Get the snackbar DIV
+                let x = document.getElementById("snackbar");
+
+                x.innerHTML = '{{ login_error_msg }}';
+
+                // Add the "show" class to DIV
+                x.className = "show";
+
+                // After 3 seconds, remove the show class from DIV
+                setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+            {% endif %}
+        });
+    </script>
+
+
+    <!--Bootsrap 4 CDN-->
+    <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css">
+
+
+    <!--Fontawesome CDN-->
+    <link rel="stylesheet" href="/static/fontawesome/css/all.css" crossorigin="anonymous">
+
+
+    <!--Custom styles-->
+    <!-- <link rel="stylesheet" type="text/css" href="styles.css"> -->
+
+    <style type="text/css">
+        html,body{
+            background-size: cover;
+            background-repeat: no-repeat;
+            height: 100%;
+            font-family: 'Numans', sans-serif;
+        }
+
+        .container{
+            height: 100%;
+            align-content: center;
+        }
+
+        .card{
+            height: 270px;
+            margin-top: auto;
+            margin-bottom: auto;
+            width: 400px;
+            background-color: rgba(0,0,0,0.5) !important;
+        }
+
+        .social_icon span{
+            font-size: 60px;
+            margin-left: 10px;
+            color: #FFC312;
+        }
+
+        .social_icon span:hover{
+            color: white;
+            cursor: pointer;
+        }
+
+        .card-header h3{
+            color: white;
+        }
+
+        .social_icon{
+            position: absolute;
+            right: 20px;
+            top: -45px;
+        }
+
+        .input-group-prepend span{
+            width: 50px;
+            background-color: #333;
+            color: black;
+            border:0 !important;
+        }
+
+        input:focus{
+            outline: 0 0 0 0  !important;
+            box-shadow: 0 0 0 0 !important;
+        }
+
+        .remember{
+            color: white;
+        }
+
+        .remember input
+        {
+            width: 20px;
+            height: 20px;
+            margin-left: 15px;
+            margin-right: 5px;
+        }
+
+        .login_btn{
+            color: black;
+            background-color: #FFC312;
+            width: 100px;
+        }
+
+        .login_btn:hover{
+            color: black;
+            background-color: white;
+        }
+
+        .links{
+            color: white;
+        }
+
+        .links a{
+            margin-left: 4px;
+        }
+
+        input {
+            background: #FF9E2A !important;
+        }
+
+        .card-header {
+            background: transparent !important;
+        }
+
+        ::placeholder { /* Firefox, Chrome, Opera */
+            color: #888 !important;
+        }
+
+        /* The snackbar - position it at the bottom and in the middle of the screen */
+        #snackbar {
+            visibility: hidden; /* Hidden by default. Visible on click */
+            min-width: 250px; /* Set a default minimum width */
+            margin-left: -125px; /* Divide value of min-width by 2 */
+            background-color: #333; /* Black background color */
+            color: #fff; /* White text color */
+            text-align: center; /* Centered text */
+            border-radius: 2px; /* Rounded borders */
+            padding: 16px; /* Padding */
+            position: fixed; /* Sit on top of the screen */
+            z-index: 1; /* Add a z-index if needed */
+            left: 50%; /* Center the snackbar */
+            bottom: 30px; /* 30px from the bottom */
+        }
+
+        /* Show the snackbar when clicking on a button (class added with JavaScript) */
+        #snackbar.show {
+            visibility: visible; /* Show the snackbar */
+            /* Add animation: Take 0.5 seconds to fade in and out the snackbar.
+            However, delay the fade out process for 2.5 seconds */
+            -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+
+        /* Animations to fade the snackbar in and out */
+        @-webkit-keyframes fadein {
+            from {bottom: 0; opacity: 0;}
+            to {bottom: 30px; opacity: 1;}
+        }
+
+        @keyframes fadein {
+            from {bottom: 0; opacity: 0;}
+            to {bottom: 30px; opacity: 1;}
+        }
+
+        @-webkit-keyframes fadeout {
+            from {bottom: 30px; opacity: 1;}
+            to {bottom: 0; opacity: 0;}
+        }
+
+        @keyframes fadeout {
+            from {bottom: 30px; opacity: 1;}
+            to {bottom: 0; opacity: 0;}
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="d-flex justify-content-center h-100">
+        <div class="card">
+            <div class="card-header">
+                <h3 style="color:#FF9E2A">ROBOT-FX</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" id="loginForm">
+                    <div class="input-group form-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-user" style="color:#fff"></i></span>
+                        </div>
+                        <input type="text" class="form-control text-center" name="username" placeholder="username" id="username_data">
+
+                    </div>
+                    <div class="input-group form-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-key" style="color:#fff"></i></span>
+                        </div>
+                        <input type="password" class="form-control text-center" name="password" placeholder="password" id="password_data">
+                        <input type="hidden" id="hidden_login_code" name="hidden_login_code" value="{{ hidden_login_code }}">
+                    </div>
+                    <div class="form-group mt-4">
+                        <input id="login_btn" type="submit" value="Login" class="btn float-right login_btn">
+                    </div>
+                </form>
+
+                <div id="snackbar">Some text some message...</div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

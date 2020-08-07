@@ -1,0 +1,655 @@
+{% extends "base.html" %}
+
+{% block title %}Blotter SPOT{% endblock %}
+
+<!-- Begin page content -->
+{% block head %}
+    <script type="text/javascript" src="/static/robotmarketdata.js"></script>
+
+    <script type="text/javascript">
+        var error_msgs_toastr_array = []
+
+        currency_formatter = Intl.NumberFormat('en-US',  {'minimumFractionDigits': 2, 'maximumFractionDigits': 2});
+
+        var processFloatNumber = function(num) {
+            return currency_formatter.format(num);
+        }
+
+        var processCurrency = function(data) {
+            let tk = Object.keys(data)
+            for (const k of tk) {
+                data[k + '_raw'] = data[k]
+                data[k] = processFloatNumber(data[k])
+            }
+            return data
+        }
+
+        var calc_total_buy = function(c, data) {
+            let result = 0
+            for (const idx in data) {
+                if (data[idx]['Currency'] == c) {
+                    result = data[idx]['BuyD0_raw']
+                    result += data[idx]['BuyD1_raw']
+                    result += data[idx]['BuyD2_raw']
+                    result = processFloatNumber(result)
+                }
+            }
+
+            return result
+        }
+
+        var calc_total_sell = function(c, data) {
+            let result = 0
+            for (const idx in data) {
+                if (data[idx]['Currency'] == c) {
+                    result = data[idx]['SellD0_raw']
+                    result += data[idx]['SellD1_raw']
+                    result += data[idx]['SellD2_raw']
+                    result = processFloatNumber(result)
+                }
+            }
+
+            return result
+        }
+
+        var open_popup = function(deal_id) {
+            var myWindow = window.open('/fxspot/blotter-spot-dealid-popup?dealid=' + deal_id, "", "width=800,height=680");
+        }
+
+        Vue.prototype.$eventHub = new Vue();
+
+        $(document).ready(function() {
+            init_market_data_panel('/fxsupplier/supplier_data/SPOT');
+
+            app_blotter = new Vue({
+                el: '#table_blotter',
+                delimiters: ['[[', ']]'],
+                data: {
+                    initialized: false,
+                    trades: [],
+                    filter_array: '',
+                },
+                methods: {
+                    handleCallback: function(event) {
+                        let data = JSON.parse(event.data);
+                        this.displayData(data);
+                    },
+                    init: function() {
+                        $.ajax({
+                            url: '/fxspot/transactions',
+                            dataType: 'json',
+                            type: 'get',
+                            contentType: 'application/json',
+                            data: '',
+                            processData: false,
+                            success: (data, textStatus, jQxhr) => {
+                                this.trades = []
+                                data.sort((a, b) => (a.timestamp > b.timestamp) ? 1 : -1);
+                                for (d in data){
+                                    this.displayData(data[d])
+                                }
+                                this.initialized = true;
+                                this.update_filter(this.filter_array);
+                            },
+                            error: (jqXhr, textStatus, errorThrown) => {
+                                console.log('Init Table Blotter error'+errorThrown)
+                            }
+                        });
+                    },
+                    displayData(data) {
+                        if (data.content_empty == 1) {
+                           return;
+                        }
+
+                        if (data.security_type != "FXSPOT"  && data.security_type != "FXFWD") {
+                           return;
+                        }
+
+                        let tradeLen = this.trades.length;
+                        let index;
+                        for (index = 0; index < tradeLen; index++) {
+                           if (this.trades[index].quote_req_id == data.quote_req_id) {
+                               break;
+                           }
+                        }
+
+                        data.amount = processFloatNumber(data.amount);
+                        data.amountbrl = processFloatNumber(data.amountbrl);
+
+                        if (data.mtype === 'REJECTED' && this.initialized) {
+                           showQuoteReqRejected(data.quote_req_id, data.rejected_text)
+                        }
+
+                        if (index < tradeLen) {
+                           this.trades[index] = data;
+                        } else {
+                           this.trades.splice(0, 0, data);
+                        }
+
+                        this.update_filter(this.filter_array);
+                    },
+                    startPage: function() {
+                        this.setupEventSource();
+                        this.$eventHub.$on('filter-bus', this.update_filter);
+                    },
+                    setupEventSource: function() {
+                        this.initialized = false;
+                        this.init();
+                        source = new EventSource("/fxspot/stream");
+                        source.addEventListener('message', this.handleCallback, false);
+                        source.onerror = function(e) {
+                            console.log('Retry SSE connection...');
+                            source.close();
+                            setTimeout(() => { app_blotter.setupEventSource() }, 2000);
+                        };
+                    },
+                    open_a_popup: function(deal_id) {
+                        open_popup(deal_id)
+                    },
+                    update_filter(filter) {
+                        this.filter_array = filter;
+                        this.$forceUpdate();
+                        Vue.nextTick(function () {
+                            try { table.columns.adjust(); } catch (e) { } 
+                            if ($('#tbody_blotter').children().length - $('#tbody_blotter').children().filter(':empty').length == 1) {
+                                $(".dataTables_empty").show();
+                            } else {
+                                $(".dataTables_empty").hide();
+                            }
+                        });
+                    },
+                    check_filter: function (mtype) {
+                        if (this.filter_array == '') {
+                            return true;
+                        }
+                        for (var index in this.filter_array) {
+                            if (mtype == this.filter_array[index]) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    },
+                },
+                beforeMount() {
+                    this.startPage();                
+                },
+            });
+
+            var showQuoteReqRejected = function(quote_id, cause) {
+                let aLen = error_msgs_toastr_array.length
+                for (i = 0; i < aLen; i++) {
+                    if (error_msgs_toastr_array[i] ==  quote_id) {
+                        return
+                    }
+                }
+
+                error_msgs_toastr_array.push(quote_id)
+
+                toastr.error("Quote Request rejected: <button type='button' class='btn clear btn-toastr' onclick='open_popup(\"" + quote_id + "\")'>" + quote_id + "</button><br />Reason: " + cause)
+                // console.log('Quote request by cause: ' + String(cause))
+            }
+
+            var app_tabs = new Vue({
+                el: '#id_ul_tabs',
+                delimiters: ['[[', ']]'],
+                data: {
+                    myTabs: [{id: 'id-amount', name: 'Amount', href: '#tab-amount', ref: 'idAmount',},
+                             {id: 'id-revenue', name: 'Revenue (BRL)', href: '#tab-revenue', ref: 'idRevenue',},
+                             {id: 'id-others', name: 'Others', href: '#tab-others', ref: 'idOthers',}],
+                },
+                mounted() {
+                    this.observer = new MutationObserver(mutations => {
+                        for (const m of mutations) {
+                            const newValue = m.target.getAttribute(m.attributeName)
+                            this.$nextTick(() => {
+                                this.onClassChange(newValue, m.oldValue, m.target)
+                            });
+                        }
+                    });
+
+                    for(ind in this.$refs["tab.ref"]) {
+                        this.observer.observe(this.$refs["tab.ref"][ind], {
+                            attributes: true,
+                            attributeOldValue : true,
+                            attributeFilter: ['class'],
+                        })
+                    }
+
+                    this.$refs["tab.ref"][0].click()
+                },
+                beforeDestroy() {
+                    this.observer.disconnect()
+                },
+                methods: {
+                    onClassChange(classAttrValue, oldValue, elem) {
+                        const classList = classAttrValue.split(' ')
+                        if (classList.includes('active')) {
+                            if (!classList.includes('gray-tab-selection')) {
+                                $('#' + elem.id).addClass('gray-tab-selection')
+                            }
+                        } else {
+                            if (classList.includes('gray-tab-selection')) {
+                                $('#' + elem.id).removeClass('gray-tab-selection')
+                            }
+                        }
+                    },
+                },
+            });
+
+            var app_tape = new Vue({
+                el: "#id-options-tape",
+                delimiters: ['[[', ']]'],
+                data: {
+                },
+                mounted() {
+                    this.observer = new MutationObserver(mutations => {
+                        for (const m of mutations) {
+                            const newValue = m.target.getAttribute(m.attributeName)
+                            this.$nextTick(() => {
+                                this.onClassChange(newValue, m.oldValue, m.target)
+                            });
+                        }
+                    });
+
+                    for(opt in this.$refs) {
+                        this.observer.observe(this.$refs[opt], {
+                            attributes: true,
+                            attributeOldValue : true,
+                            attributeFilter: ['class'],
+                        })
+                    }
+
+                    $("label.btn.btn-secondary.active").css('border-color', $("label.btn.btn-secondary.active").css('color'));
+                },
+                beforeDestroy() {
+                    this.observer.disconnect()
+                },
+                methods: {
+                    onClassChange(classAttrValue, oldValue, elem) {
+                        const classList = classAttrValue.split(' ')
+                        if (classList.includes('active')) {
+                            $(elem).css('border-color', $(elem).css('color'));
+                        } else {
+                            $(elem).css('border-color', '#444');
+                        }
+                    },
+                    bus_filter(filter) {
+                        this.$eventHub.$emit('filter-bus', filter.split('|'));
+                    },
+                },
+            });
+
+            app_amounties = new Vue({
+                el: '#table_amounties',
+                delimiters: ['[[', ']]'],
+                data: {
+                    amounties: [],
+                    sorted_currencies: {{ sorted_currencies|safe }},
+                },
+                methods: {
+                    pooling: function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxspot/balance_spot', _data => {
+                                let data = JSON.parse(_data);
+                                this.displayData(data);
+                            }).fail(function() {
+                                // TODO: Fail treatment
+                                setTimeout(() => { app_amounties.pooling() }, 3000)
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling() }, waitTime)
+                            })
+                    },
+                    displayData: function(data) {
+                        let tk = this.sorted_currencies
+                        this.amounties = [];
+                        for (const k of tk) {
+                            let td = data[k]
+                            td = td['TotalAmount']
+                            td = processCurrency(td)
+                            td.Currency = k
+                            this.amounties.push(td)
+                        }
+                        this.$forceUpdate();
+                    },
+                    total_buy: function(c) {
+                        return calc_total_buy(c, this.amounties)
+                    },
+                    total_sell: function(c) {
+                        return calc_total_sell(c, this.amounties)
+                    },
+                },
+                beforeMount() {
+                    this.pooling();
+                },
+            });
+
+            var app_revenues = new Vue({
+                el: '#table_revenues',
+                delimiters: ['[[', ']]'],
+                data: {
+                    revenues: [],
+                    sorted_currencies: {{ sorted_currencies|safe }},
+                },
+                methods: {
+                    pooling: function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxspot/balance_spot', _data => {
+                                let data = JSON.parse(_data);
+                                this.displayData(data);
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling() }, waitTime)
+                            })
+                    },
+                    displayData: function(data) {
+                        let tk = this.sorted_currencies
+                        this.revenues = [];
+                        for (const k of tk) {
+                            let td = data[k]
+                            td = td['TotalRevenue']
+                            td = processCurrency(td)
+                            td.Currency = k
+                            this.revenues.push(td)
+                        }
+
+                        this.$forceUpdate();
+                    },
+                    startPage: function() {
+                        this.source.addEventListener('message', this.handleCallback, false)
+                    },
+                    total_buy: function(c) {
+                        return calc_total_buy(c, this.revenues)
+                    },
+                    total_sell: function(c) {
+                        return calc_total_sell(c, this.revenues)
+                    },
+                },
+                beforeMount(){
+                    this.pooling();
+                },
+            });
+
+            var app_others = new Vue({
+                el: '#table_others',
+                delimiters: ["<%", "%>"],
+                data: {
+                    data: null,
+                    sorted_currencies: {{ sorted_currencies|safe }},
+                },
+                beforeMount: function() {
+                    this.pooling();
+                },
+                methods: {
+                    pooling: function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxsupplier/supplier-control-data', _data => {
+                                self.data = _data
+                                this.$forceUpdate();
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling() }, waitTime)
+                            })
+                    },
+                },
+            });
+        });
+    </script>
+
+    <style>
+        .tab-orange-border {
+            border-style: solid;
+            border-right-color: #FF9E2A !important;
+            border-left-color: #FF9E2A !important;
+            border-top-color: #FF9E2A !important;
+        }
+
+        .text-color-orange {
+            color: #FF9E2A !important;
+        }
+
+        .gray-tab-selection {
+            background: #595959 !important;
+            color: #FF9E2A !important;
+        }
+
+        td a {
+            color: #FF9E2A !important;
+        }
+    </style>
+{% endblock %}
+
+{% block halt %}
+    {% include 'halt-spot.html' %}
+{% endblock halt %}
+
+{% block main %}
+    <div class="container-fluid">
+
+        {% include 'panel-market-data-quotes.html' %}
+
+        <div id="id-options-tape" class="row">
+            <div class="col">
+                <div class="btn-group btn-group-sm btn-group-toggle" data-toggle="buttons">
+                    <label v-on:click="bus_filter('DEAL')" class="btn btn-secondary text-success" ref="deals">
+                        <input type="radio" value="deals" name="options" id="option1" autocomplete="off" checked> Deals
+                    </label>
+                    <label v-on:click="bus_filter('REJECTED')" class="btn btn-secondary text-danger" ref="rejected">
+                        <input type="radio" value="rejected" name="options" id="option2" autocomplete="off"> Rejected
+                    </label>
+                    <label v-on:click="bus_filter('NOTH.DONE|TIMEOUT|EXP.QUOTE|ACK.UNKNOWN')" class="btn btn-secondary text-warning" ref="lost">
+                        <input type="radio" value="lost" name="options" id="option3" autocomplete="off"> Lost
+                    </label>
+                    <label v-on:click="bus_filter('')" class="btn btn-secondary active" ref="all">
+                        <input type="radio" value="all" name="options" id="option4" autocomplete="off"> All
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-2">
+            <div class="col table-responsive">
+                <table id="table_blotter" class="table table-bordered table-hover table-sm small">
+                    <thead>
+                        <tr class="header text-center">
+                            <th>Status</th>
+                            <th>Deal ID</th>
+                            <th>DealCode</th>
+                            <th>Counterparty</th>
+                            <th>CNPJ</th>
+                            <th>Amount</th>
+                            <th>CCY</th>
+                            <th>Buy</th>
+                            <th>Sell</th>
+                            <th>Sett BRL</th>
+                            <th>Sett CCY</th>
+                            <th>Spot</th>
+                            <th>Spread (bps)</th>
+                            <th>Revenue (BRL)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody_blotter" class="text-center text-primary">
+                        <tr v-for="x in trades">
+                            <template v-if="check_filter(x.mtype)">
+                                <td v-bind:style="{ color: [[ x.color ]] }">
+                                    [[ x.mtype ]]
+                                </td>
+                                <td v-bind:style="">
+                                    <a href="#" v-on:click="open_a_popup(x.quote_req_id)">[[ x.quote_req_id ]]</a>
+                                </td>
+                                <td v-bind:style="">[[ x.dealcode ]]</td>
+                                <td v-bind:style="">[[ x.counterparty ]]</td>
+                                <td class="td-cnpj-formatted">[[ x.cnpj | formatCNPJ ]]</td>
+                                <td v-bind:style="">[[ x.amount ]]</td>
+                                <td v-bind:style="">[[ x.currency ]]</td>
+                                <td v-bind:style="">[[ x.buy ]]</td>
+                                <td v-bind:style="">[[ x.sell ]]</td>
+                                <td v-bind:style="">[[ x.settlement_brl_dn ]]</td>
+                                <td v-bind:style="">[[ x.settlement_ccy_dn ]]</td>
+                                <td v-bind:style="">[[ x.s_cost ]]</td>
+                                <td v-bind:style=""><template v-if="x.spread">[[ (x.spread * 10000)|numberformat ]]</template></td>
+                                <td v-bind:style=""><template v-if="x.revenue">[[ x.revenue|currency ]]</template></td>
+                            </template>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="row">
+            &nbsp;
+        </div>
+
+        <ul id="id_ul_tabs" class="nav nav-tabs small">
+            <li class="nav-item" v-for="(tab, idx) in myTabs">
+                <a :id="tab.id" class="nav-link" data-toggle="tab" style="border: 1px solid gray; border-bottom: 0px;" :href="tab.href" ref="tab.ref">[[ tab.name ]]</a>
+            </li>
+        </ul>
+
+        <div class=" tab-content">
+            <div class="col-12 tab-pane container active" id="tab-amount">
+                <table id="table_amounties" class="table table-bordered table-sm small mt-2">
+                    <template v-if="amounties!=[]">
+                        <thead>
+                            <tr class="header text-center table-th-25">
+                                <th></th>
+                                <th colspan="4" style="color: #00bc8c !important; font-weight: bold;">Buy</th>
+                                <th colspan="4" style="color: #E74C3C !important; font-weight: bold;">Sell</th>
+                            </tr>
+                            <tr class="header text-center table-th-25">
+                                <th></th>
+                                <th>Total</th>
+                                <th>d+0</th>
+                                <th>d+1</th>
+                                <th>d+2</th>
+                                <th>Total</th>
+                                <th>d+0</th>
+                                <th>d+1</th>
+                                <th>d+2</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="text-center" v-for="amount in amounties">
+                                <th class="table-th">[[ amount.Currency ]]</th>
+                                <td class="font-weight-bold">[[ total_buy(amount.Currency) ]]</td>
+                                <td>[[ amount.BuyD0  ]]</td>
+                                <td>[[ amount.BuyD1  ]]</td>
+                                <td>[[ amount.BuyD2  ]]</td>
+                                <td class="font-weight-bold">[[ total_sell(amount.Currency) ]]</td>
+                                <td>[[ amount.SellD0 ]]</td>
+                                <td>[[ amount.SellD1 ]]</td>
+                                <td>[[ amount.SellD2 ]]</td>
+                            </tr>
+                        </tbody>
+                    </template>
+                </table>
+            </div>
+            <div class="col-12 tab-pane container fade" id="tab-revenue">
+                <table id="table_revenues" class="table table-bordered table-sm small mt-2">
+                    <thead>
+                        <tr class="header text-center table-th-25">
+                            <th></th>
+                            <th colspan="4" style="color: #00bc8c !important; font-weight: bold;">Buy</th>
+                            <th colspan="4" style="color: #E74C3C !important; font-weight: bold;">Sell</th>
+                        </tr>
+                        <tr class="header text-center table-th-25">
+                            <th></th>
+                            <th>Total</th>
+                            <th>d+0</th>
+                            <th>d+1</th>
+                            <th>d+2</th>
+                            <th>Total</th>
+                            <th>d+0</th>
+                            <th>d+1</th>
+                            <th>d+2</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="text-center" v-for="revenue in revenues">
+                            <th class="table-th">[[ revenue.Currency ]]</th>
+                            <td class="font-weight-bold">[[ total_buy(revenue.Currency) ]]</td>
+                            <td>[[ revenue.BuyD0  ]]</td>
+                            <td>[[ revenue.BuyD1  ]]</td>
+                            <td>[[ revenue.BuyD2  ]]</td>
+                            <td class="font-weight-bold">[[ total_sell(revenue.Currency) ]]</td>
+                            <td>[[ revenue.SellD0 ]]</td>
+                            <td>[[ revenue.SellD1 ]]</td>
+                            <td>[[ revenue.SellD2 ]]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-12 tab-pane container fade float-left w-100" id="tab-others">
+                <div class="col-6 float-left ml-0 pl-0">
+                    <table id="table_others" class="table table-bordered table-sm small mt-2">
+                        <thead>
+                            <tr class="header text-center table-th-50">
+                                <th></th>
+                                <th colspan="2" class="text-nowrap">Markup FX-Supplier (bps)</th>
+                                <th colspan="2" class="text-nowrap">Cash Limits for d+n</th>
+                            </tr>
+                            <tr class="header text-center table-th-50">
+                                <th></th>
+                                <th style="color: #00bc8c !important; font-weight: bold;">Buy</th>
+                                <th style="color: #E74C3C !important; font-weight: bold;">Sell</th>
+                                <th>d+0</th>
+                                <th>d+1</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-if="data">
+                                <tr class="text-center" v-for="(ccy, ind) in sorted_currencies">
+                                    <th class="table-th"><% ccy %></th>
+                                    <td class="cell_buy" v-if="data[ccy]"><% Math.round(data[ccy]['MarkupBUY'] * 10000) %></td>
+                                    <td class="cell_sell" v-if="data[ccy]"><% Math.round(data[ccy]['MarkupSELL'] * 10000) %></td>
+                                    <td v-if="data[ccy]"><% data[ccy]['CashLimitsD0']|currency %></td>
+                                    <td v-if="data[ccy]"><% data[ccy]['CashLimitsD1']|currency %></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock main %}
+
+{% block trading_status %}
+    {% include 'status-trading-spot.html' %}
+{% endblock trading_status %}
+
+{% block script_eof %}
+<link rel="stylesheet" type="text/css" href="/static/DataTables/datatables.min.css"/>
+<script type="text/javascript" src="/static/DataTables/datatables.min.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        toastr.options.timeOut = 0
+        toastr.options.extendedTimeOut = 0
+        toastr.options.closeButton = true
+        $('#nav-items li').removeClass('active');
+        $('#nav-item-main_blotter').addClass('active');
+
+        table = $('#table_blotter').DataTable({
+            "paging":         false,
+            // "order":          [[ 2, 'asc']],
+            "ordering":       false,
+            "info":           false,
+            "searching":      false,
+            "fixedHeader":    true,
+            "scrollCollapse": true,
+            "scrollY":        "32vh",
+        });
+
+        setTimeout(function(){
+            try { table.columns.adjust(); } catch (e) { }
+        }, 800);
+    });
+</script>
+{% endblock %}

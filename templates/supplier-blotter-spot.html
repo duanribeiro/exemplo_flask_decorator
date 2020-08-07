@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+{% block title %}Blotter SPOT - Supplier{% endblock %}
+
+<!-- Begin page content -->
+{% block head %}
+    <script type="text/javascript" src="/static/toastr.min.js"></script>
+    <script type="text/javascript" src="/static/robotmarketdata.js"></script>
+
+    <script type="text/javascript">
+        currency_formatter = Intl.NumberFormat('en-US',  {'minimumFractionDigits': 2, 'maximumFractionDigits': 2});
+        sound_deal = new Audio('/static/sounds/fxsupplier_blotter.wav');
+
+        var processFloatNumber = function(num) {
+            return currency_formatter.format(num);
+        }
+
+        Vue.filter('currency', function (value) {
+            return currency_formatter.format(value);
+        });
+
+        var processCurrency = function(data) {
+            let tk = Object.keys(data)
+            for (const k of tk) {
+                data[k + '_raw'] = data[k]
+                data[k] = processFloatNumber(data[k])
+            }
+            return data
+        }
+
+        var play_sound_deal = function(){
+            sound_deal.cloneNode(true).play().catch(error => console.log("som desabilitado"))
+        }
+
+        is_deal_spot = function(data) {
+            if (data.security_type == "FXSPOT" && data.mtype == "DEAL") {
+                return true;
+            };
+
+            return false;
+        }
+
+        $(document).ready(function() {
+            toastr.options.timeOut = 0
+            toastr.options.extendedTimeOut = 0
+            toastr.options.closeButton = true
+            init_market_data_panel('/fxsupplier/supplier_data/SPOT');
+
+            app_balance = new Vue({
+                el: '#table_balance',
+                delimiters: ["<%", "%>"],
+                data: {
+                    data: null,
+                    sorted_currencies: {{ sorted_currencies|safe }},
+                },
+                methods: {
+                    pooling: function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxsupplier/supplier-control-data', _data => {
+                                self.data = _data
+                                this.$forceUpdate()
+                            }).fail(function() {
+                                // TODO: Fail treatment
+                                setTimeout(() => { app_balance.pooling() }, 3000)
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling() }, waitTime)
+                            })
+                    },
+                },
+                beforeMount() {
+                    this.pooling();
+                },
+            });
+
+            app_blotter = new Vue({
+                el: '#table_blotter',
+                delimiters: ['[[', ']]'],
+                data: {
+                    initialized: false,
+                    trades: [],
+                },
+                methods: {
+                    toBps: function(value) {
+                        if (!isNaN(parseFloat(value)) && isFinite(value))
+                            return value * 10000;
+                        else
+                            return '-';
+                    },
+                    handleCallback: function(event) {
+                        let json_data = JSON.parse(event.data);
+                        this.displayData(json_data);
+                        if (is_deal_spot(json_data))
+                            play_sound_deal()
+                    },
+                    init: function() {
+                        $.ajax({
+                            url: '/fxsupplier/transactions',
+                            dataType: 'json',
+                            type: 'get',
+                            contentType: 'application/json',
+                            data: '',
+                            processData: false,
+                            success: (data, textStatus, jQxhr) => {
+                                this.trades = []
+                                data.sort((a, b) => (a.timestamp > b.timestamp) ? 1 : -1);
+                                for (d in data){
+                                    this.displayData(data[d])
+                                }
+                                this.initialized = true;
+                            },
+                            error: (jqXhr, textStatus, errorThrown) => {
+                                console.log('Init Table Blotter error'+errorThrown)
+                            }
+                        });
+                    },
+                    displayData(data) {
+                        if (data.content_empty == 1 || !is_deal_spot(data))
+                            return;
+
+                        let tradeLen = this.trades.length;
+                        let index;
+                        for (index = 0; index < tradeLen; index++) {
+                            if (this.trades[index].quote_req_id == data.quote_req_id) {
+                                break;
+                            }
+                        }
+
+                        data.amount = processFloatNumber(data.amount);
+                        data.amountbrl = processFloatNumber(data.amountbrl);
+
+                        if (data.mtype === 'REJECTED' && this.initialized) {
+                            showQuoteReqRejected(data.id, data.rejected_text)
+                         }
+
+                        if (index < tradeLen) {
+                            this.trades[index] = data;
+                        } else {
+                            this.trades.splice(0, 0, data);
+                        }
+
+                        this.$forceUpdate();
+
+                        Vue.nextTick(function () {
+                            try { table.columns.adjust(); } catch (e) { }
+                            if ($('#tbody_blotter').children().length - $('#tbody_blotter').children().filter(':empty').length == 1) {
+                                $(".dataTables_empty").show();
+                            } else {
+                                $(".dataTables_empty").hide();
+                            }
+                        });
+                    },
+                    startPage: function() {
+                        this.setupEventSource();
+                    },
+                    setupEventSource: function() {
+                        this.init();
+                        source = new EventSource("/fxsupplier/fxsupplier-stream");
+                        source.addEventListener('message', this.handleCallback, false);
+                        source.onerror = function(e) {
+                            console.log('Retry SSE connection...');
+                            source.close();
+                            setTimeout(() => { app_blotter.setupEventSource() }, 2000);
+                        };
+                    },
+                },
+                beforeMount() {
+                    this.startPage();
+                },
+            });
+
+            app_accounting = new Vue({
+                el: '#table_accounting',
+                delimiters: ['[[', ']]'],
+                data: {
+                    initialized: false,
+                    max_num_days_transaction: 3,
+                    trades_net: {},
+                    trades_buy: {},
+                    trades_sell: {},
+                    sorted_currencies: {{ sorted_currencies | safe }},
+                },
+                methods: {
+                    pooling: function() {
+                            var startTime = new Date().getTime();
+                            $.get('/fxsupplier/fxsupplier-transactions', response => {
+                                for (ind in this.sorted_currencies) {
+                                    let data = JSON.parse(response);
+
+                                    let currency = this.sorted_currencies[ind]
+                                    let currency_data = data[currency]
+                                    this.trades_net[currency] = processFloatNumber(currency_data['Net'])
+
+                                    this.trades_buy[currency] = Array(this.max_num_days_transaction + 1).fill(0)
+                                    this.trades_buy[currency][0] = processFloatNumber(currency_data['BuyTotal'])
+
+                                    this.trades_sell[currency] = Array(this.max_num_days_transaction + 1).fill(0)
+                                    this.trades_sell[currency][0] = processFloatNumber(currency_data['SellTotal'])
+
+                                    for (let ind = 0; ind < this.max_num_days_transaction; ind++) {
+                                        this.trades_buy[currency][ind + 1] = processFloatNumber(currency_data['BuyD' + String(ind)])
+
+                                        this.trades_sell[currency][ind + 1] = processFloatNumber(currency_data['SellD' + String(ind)])
+                                    }
+
+                                    this.$forceUpdate()
+                                }
+                            }).fail(function() {
+                                // TODO: Fail treatment
+                                setTimeout(() => { app_accounting.pooling() }, 3000)
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling() }, waitTime)
+                            })
+                    },
+                },
+                beforeMount() {
+                    this.pooling();
+                },
+            });
+        });
+    </script>
+
+    <style type="text/css">
+        a {
+            color: #FF9E2A !important; 
+        }
+    </style>
+{% endblock %}
+
+{% block halt %}
+    {% include halt %}
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+
+        {% include 'panel-market-data-quotes.html' %}
+
+        <div class="row mt-2" id="table_balance">
+            <div class="col">
+                <table class="table table-bordered table-hover table-sm small">
+                    <template v-if="data">
+                        <thead>
+                            <tr class="header text-center">
+                                <th></th>
+                                <th class="font-weight-bold" v-for="(ccy, idx) in sorted_currencies"><% ccy %></th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-center text-primary">
+                            <tr class="">
+                                <th class="font-weight-bold">Balance d+0</th>
+                                <template v-for="(ccy, idx) in sorted_currencies">
+                                    <td v-if="data[ccy]">
+                                        <% data[ccy]['CashLimitsD0']|currency %>
+                                    </td>
+                                </template>
+                            </tr>
+                            <tr class="">
+                                <th class="font-weight-bold">Balance d+1</th>
+                                <template v-for="(ccy, idx) in sorted_currencies">
+                                    <td v-if="data[ccy]">
+                                        <% data[ccy]['CashLimitsD1']|currency %>
+                                    </td>
+                                </template>
+                            </tr>
+                        </tbody>
+                    </template>
+                </table>
+            </div>
+        </div>
+
+        <div class="row mt-2">
+            <div class="col table-responsive">
+                <table id="table_blotter" class="table table-bordered table-hover table-sm small">
+                    <thead>
+                        <tr class="header text-center">
+                            <th class="font-weight-bold">Status</th>
+                            <th class="font-weight-bold">Deal ID</th>
+                            <th class="font-weight-bold">DealCode</th>
+                            <th class="font-weight-bold">Counterparty</th>
+                            <th class="font-weight-bold">CNPJ</th>
+                            <th class="font-weight-bold">Amount</th>
+                            <th class="font-weight-bold">CCY</th>
+                            <th class="font-weight-bold">Buy</th>
+                            <th class="font-weight-bold">Sell</th>
+                            <th class="font-weight-bold">Settlement (BRL:CCY)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody_blotter" class="text-center text-primary">
+                        <tr v-for="x in trades">
+                            <td v-bind:style="{ color: [[ x.color ]] }">
+                                [[ x.mtype ]]
+                            </td>
+                            <td v-bind:style="">
+                                [[ x.quote_req_id ]]
+                            </td>
+                            <td v-bind:style="">
+                                [[ x.dealcode ]]
+                            </td>
+                            <td v-bind:style="">
+                                [[ x.counterparty ]]
+                            </td>
+                            <td class="td-cnpj-formatted">
+                                [[ x.cnpj | formatCNPJ ]]
+                            </td>
+                            <td v-bind:style="">
+                                [[ x.amount ]]
+                            </td>
+                            <td v-bind:style="">
+                                [[ x.currency ]]
+                            </td>
+                            <td v-bind:style="">
+                                [[ x.buy ]]
+                            </td>
+                            <td v-bind:style="">
+                                [[ x.sell ]]
+                            </td>
+                            <td v-bind:style="">
+                                [[ x.settlement_brl ]]
+                            </td>
+                        </tr>
+                   </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="row">
+            &nbsp;
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <table id="table_accounting" class="table table-bordered table-sm small">
+                    <thead>
+                        <tr class="header text-center table-th-25">
+                            <th rowspan="2"></th>
+                            <th rowspan="2" class="font-weight-bold">NET</th>
+                            <th colspan="4" style="color: #00bc8c !important; font-weight: bold;">BUY</th>
+                            <th colspan="4" style="color: #E74C3C !important; font-weight: bold;">SELL</th>
+                        </tr>
+                        <tr class="header text-center table-th-25">
+                            <th class="font-weight-bold">Total</th>
+                            <th class="font-weight-bold">d+0</th>
+                            <th class="font-weight-bold">d+1</th>
+                            <th class="font-weight-bold">d+2</th>
+                            <th class="font-weight-bold">Total</th>
+                            <th class="font-weight-bold">d+0</th>
+                            <th class="font-weight-bold">d+1</th>
+                            <th class="font-weight-bold">d+2</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody_accounting" class="text-center text-primary">
+                        <tr class="text-center" v-for="currency in sorted_currencies">
+                            <th class="table-th font-weight-bold">[[ currency ]]</th>
+                            <td v-html="trades_net[currency]" class="font-weight-bold"></td>
+                            <template v-for="value in trades_buy[currency]">
+                                <td v-html="value"></td>
+                            </template>
+                            <template v-for="value in trades_sell[currency]">
+                                <td v-html="value"></td>
+                            </template>
+                        </tr>    
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block trading_status %}
+    {% include 'status-trading-supplier.html' %}
+{% endblock trading_status %}
+
+{% block script_eof %}
+<link rel="stylesheet" type="text/css" href="/static/DataTables/datatables.min.css"/>
+<script type="text/javascript" src="/static/DataTables/datatables.min.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#nav-items li').removeClass('active');
+        $('#nav-item-blotter_spot').addClass('active');
+
+        table = $('#table_blotter').DataTable({
+            "paging":         false,
+            "ordering":       false,
+            "info":           false,
+            "searching":      false,
+            "fixedHeader":    true,
+            "scrollCollapse": true,
+            "scrollY":        "40vh",
+        });
+
+         setTimeout(function(){
+            try { table.columns.adjust(); } catch (e) { }
+        }, 100);
+    });
+</script>
+{% endblock %}

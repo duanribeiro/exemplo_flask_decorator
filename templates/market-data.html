@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Market Data{% endblock %}
+
+{% block head %}
+    <script type="text/javascript" src="/static/robotmarketdata.js"></script>
+
+    <script type="text/javascript">
+
+        window.onload = function () {
+            init_market_data_panel('/fxsupplier/supplier_data/{{sec_type}}');
+
+
+            app_risk_data_curves = new Vue({
+                el: '#div_risk_data_curves',
+                delimiters: ["<%","%>"],
+                data: {
+                    risk_data_curves: null,
+                    time_stamp: null
+                },
+                methods: {
+                    pooling: function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxsupplier/risk_data', _data => {
+                                let data = JSON.parse(_data);
+                                this.risk_data_curves = data;
+                                this.time_stamp = data['Timestamp'];
+                                this.$forceUpdate()
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling() }, waitTime)
+                            })
+                    },
+                    popup_curva_detalhes(curve_code) {
+                        var myWindow = window.open("/fxsupplier/market-data/details/" + curve_code, "", "width=800,height=500");
+                    },
+                    percentage(value) {
+                        return (value * 100.0).toFixed(6);
+                    }
+                },
+                beforeMount() {
+                    this.pooling();
+                },
+            })
+        }
+    </script>
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        {% include 'panel-market-data-quotes.html' %}
+
+        <div class="row mt-2 p-2">
+            <div class="col">
+                <div id="div_risk_data_curves">
+                    <template v-for="(curve, key, index) in risk_data_curves">
+                        <table class="table table-margin table-bordered table-sm small mt-2">
+                            <tr class="header text-center">
+                                <th class="w-25 clickable-element" v-on:click="popup_curva_detalhes(key)"><u><% key.replace('_', ' ') %></u></th>
+                                <th v-for="label in curve.RiskLabels"><% label %></th>
+                            </tr>
+                            <tr>
+                                <th class="curve-bid text-center">BID (% a.a.)</th>
+                                <td class="curve-bid text-center" v-for="bid in curve.RatesBid"><% percentage(bid) %></td>
+                            </tr>  
+                            <tr>
+                                <th class="curve-offer text-center">OFFER (% a.a.)</th>
+                                <td class="curve-offer text-center" v-for="offer in curve.RatesOffer"><% percentage(offer) %></td>
+                            </tr>
+                        </table>
+                        <h6 class="small h6-margin">Last Update: <span style="color: black; background-color: rgb(255, 198, 129) !important; border-color: #FF9E2A !important; margin-left: 1px; border: 1px solid; border-radius: 0.2rem; font-weight: bold;"><% curve.LastUpdate %></span></h6>
+                    </template>
+                </div>
+            </div>
+        </div>
+{% endblock %}
+
+{% block script_eof %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#nav-items li').removeClass('active');
+            $('#nav-item-market_data').addClass('active');
+        });
+    </script>
+{% endblock %}

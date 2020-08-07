@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html class="h-100">
+
+<head>
+    {% block title %}
+        <title>Blotter</title>
+    {% endblock title %}
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <script src="/static/jquery-3.4.1.min.js"></script>
+    <script src="/static/popper.min.js"></script>
+    <script src="/static/jquery.redirect.js"></script>
+    <script src="/static/bootstrap.min.js"></script>
+    <script src="/static/vue.js"></script>
+    <script src="/static/vue-mixin.js"></script>
+    <script src="/static/robotfx.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/robotfx.css">
+
+    <link rel="stylesheet" type="text/css" href="/static/css/base-popup.css">
+
+    {% block head %}
+    {% endblock head %}
+</head>
+
+<body class="d-flex flex-column h-100">
+    <header>
+        <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark p-0">
+            <span class="navbar-brand" href="#" style="cursor: default;text-decoration: none;"> &nbsp; <span class="text-warning font-weight-bold">ROBOT-FX</span></span>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+        </nav>
+    </header>
+
+    <main role="main" class="flex-shrink-0 mt-5">
+
+    {% block main %}
+    {% endblock main %}
+    
+    </main>
+
+    <footer class="footer mt-auto py-0 bg-dark fixed-bottom">
+        <div class="container mb-1">
+            <span class="small">v0.12.0</span>
+        </div>
+    </footer>
+
+    <script src="/static/bootstrap.min.js"></script>
+
+    {% block script_eof %}
+    {% endblock script_eof %}
+</html>

@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}FX Supplier Control{% endblock %}
+
+{% block head %}
+    <script type="text/javascript" src="/static/robotmarketdata.js"></script>
+
+    <script src="/static/p-input.js"></script>
+    <script src="/static/number-input.js"></script>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            init_market_data_panel('/fxsupplier/supplier_data/NDF');
+
+            app_currency_config = new SimpleApplyConfig({
+                el: '#div_currencies_config',
+                delimiters: ["<%","%>"],
+                data: {
+                    data: null,
+                    casado_data: null,
+                    modified_casado: false,
+                    sorted_currencies: {{ sorted_currencies|safe }}
+                },
+                beforeMount: function() {
+                    this.update()
+                },
+                created: function() {
+                    window.addEventListener('keydown', (e) => {
+                        if (e.key == ',') {
+                            e.preventDefault()
+                        }
+                    });
+                },
+                methods: {
+                    update: function() {
+                        var self = this
+                        $.get("/fxsupplier/supplier-control-data", function(data_) {
+                            self.data = data_
+                        })
+                        $.get("/fxsupplier/casado-data", function(data) {
+                            self.casado_data = data
+                        })
+                    },
+                    onchange_value_casado: function(event) {
+                        this.modified_casado = true
+                        this.onchange_value(event)
+                    },
+                    submit: function(event) {
+                        if(event == 0) {
+                            return
+                        }
+                        url = '/fxsupplier/supplier-control-limits-put'
+                        var self = this
+
+                        $.ajax({
+                            url: url,
+                            dataType: 'json',
+                            type: 'put',
+                            contentType: 'application/json',
+                            data: JSON.stringify({'data': this.data}),
+                            processData: false,
+                            success: function(data, textStatus, jQxhr){
+                                let status = data['status']
+                                if (!status.includes('ok')) {
+                                    if (status.includes('invalid_uploaded_data')) {
+                                        toastr.error('Error: one or more fields are invalid!')
+                                    } else {
+                                        toastr.error("Unknow error! Please, contact OctaPlus' staff!")
+                                    }
+                                }
+
+                                self.update()
+                            },
+                            error: function(jqXhr, textStatus, errorThrown){
+                                alert('Erro> event vale: ' + textStatus)
+                            }
+                        })
+
+                        if(self.modified_casado) {
+                            url = '/fxsupplier/casado-data-put'
+                            $.ajax({
+                                url: url,
+                                dataType: 'json',
+                                type: 'put',
+                                contentType: 'application/json',
+                                data: JSON.stringify({'data': this.casado_data['CasadoBuy']}),
+                                processData: false,
+                                success: function(data, textStatus, jQxhr){
+                                    let status = data['status']
+                                    if (!status.includes('ok')) {
+                                        if (status.includes('invalid_uploaded_data')) {
+                                            toastr.error('Error: one or more fields are invalid!')
+                                        } else {
+                                            toastr.error("Unknow error! Please, contact OctaPlus' staff!")
+                                        }
+                                    } else {
+                                        self.modified_casado = false
+                                    }
+
+                                    self.update()
+                                },
+                                error: function(jqXhr, textStatus, errorThrown){
+                                    alert('Erro> event vale: ' + textStatus)
+                                }
+                            })
+                        }
+                    },
+                }
+            })
+
+            app_risk_data_curves = new Vue({
+                el: '#div_risk_data_curves',
+                delimiters: ["<%","%>"],
+                data: {
+                    risk_data_curves: null,
+                    time_stamp: null
+                },
+                methods: {
+                    pooling: function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxsupplier/risk_data', _data => {
+                                let data = JSON.parse(_data);
+                                this.risk_data_curves = data;
+                                this.time_stamp = data['Timestamp'];
+                                this.$forceUpdate()
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling() }, waitTime)
+                            })
+                    },
+                    popup_curva_detalhes(curve_code) {
+                        var myWindow = window.open("/fxsupplier/market-data/details/" + curve_code, "", "width=800,height=500");
+                    },
+                    percentage(value) {
+                        return (value * 100.0).toFixed(6);
+                    }
+                },
+                beforeMount() {
+                    this.pooling();
+                },
+            })
+
+            $("#idApplyChanges").click(() => {
+                let vue_arr = [app_currency_config,]
+                for (var ind in vue_arr) {
+                    vue_arr[ind].save()
+                }
+            })
+        })
+    </script>
+
+    <style type="text/css">
+        .p_input_class {
+            font-size: inherit !important;
+        }
+    </style>
+{% endblock %}
+
+{% block halt %}
+    {% include 'halt-quoting.html' %}
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        {% include 'panel-market-data-quotes.html' %}
+
+        <div class="row p-2"  style="height:260px; overflow:auto;">
+
+            <div id="div_currencies_config" class="col">
+                <table v-if="casado_data != null" class="table table-bordered table-sm small mt-2" style="max-width: max-content;">
+                    <tbody>
+                       <tr>
+                            <th style="max-width: 32em; width: auto;">Casado:</th>
+                            <td class="bg-orange" style="max-width: 6.4em; width: auto;" v-if="data != null">
+                               <p_input v-on:input="onchange_value_casado" v-model="casado_data['CasadoBuy']" multiplier="1000" decimalplaces="2" class="border-0 col text-center input_spread bg-transparent" placeholder="-">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th style="max-width: 32em; width: auto;">Settlement Rate BRL (%aa, DU 252):</th>
+                            <td class="bg-orange" style="max-width: 6.4em; width: auto;" v-if="data != null">
+                                <p_input v-on:input="onchange_value" v-model="data['BRL']['SettlementRate']" multiplier="100" decimalplaces="2" class="border-0 col text-center input_spread bg-transparent" placeholder="-">
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="table table-bordered table-sm small mt-2" style="max-width: fit-content;">
+                    <thead>
+                        <tr class="header text-center table-th-25">
+                            <th></th>
+                            <th>Auto Flow</th>
+                            <th colspan="2">Markup Treasure (bps)</th>
+                            <th>Settlement Rate</th>
+                            <th colspan="2">Spot Rate</th>
+                        </tr>
+                        <tr class="header text-center table-th-25">
+                            <th style="width: 6rem;">Currency</th>
+                            <th style="max-width: max-content;">Max. Amount</th>
+                            <th style="max-width: max-content;">BUY</th>
+                            <th style="max-width: max-content;">SELL</th>
+                            <th style="max-width: max-content;">(%aa, Exp 360)</th>
+                            <th style="width: 16rem;">BUY</th>
+                            <th style="width: 16rem;">SELL</th>
+                        </tr>
+                    </thead>
+                    <tr v-if="data != null" class="text-center" v-for="(ccy, idx) in sorted_currencies">
+                        <th><% ccy %></th>
+                        <td class="bg-orange">
+                            <template>
+                                <number_input v-on:input="onchange_value" v-model.number="data[ccy]['MaxQuantity']" :decimalplaces="0" class="border-0 col text-center input_spread bg-transparent" placeholder="-">
+                            </template>
+                        </td>
+                        <td class="bg-orange">
+                            <template>
+                                <p_input v-on:input="onchange_value" v-model.number="data[ccy]['MarkupBUY']" multiplier="10000" decimalplaces="0" class="border-0 col text-center input_spread bg-transparent" placeholder="-">
+                            </template>
+                        </td>
+                        <td class="bg-orange">
+                            <template>
+                                <p_input v-on:input="onchange_value" v-model.number="data[ccy]['MarkupSELL']" multiplier="10000" decimalplaces="0" class="border-0 col text-center input_spread bg-transparent" placeholder="-">
+                            </template>
+                        </td>
+                        <td class="bg-orange"><p_input v-on:input="onchange_value" v-model="data[ccy]['SettlementRate']" multiplier="100" decimalplaces="2" class="border-0 col text-center input_spread bg-transparent" placeholder="-"></td>
+                        <td class="cell_buy"><% data[ccy]['Buy'] %></td>
+                        <td class="cell_sell"><% data[ccy]['Sell'] %></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+
+        <div class="row mt-2 p-2">
+            <div class="col">
+                <div id="div_risk_data_curves">
+                    <template  v-for="(curve, key, index) in risk_data_curves">
+                        <table class="table table-margin table-bordered table-sm small mt-2">
+                            <tr class="header text-center">
+                                <th class="w-25 clickable-element" v-on:click="popup_curva_detalhes(key)"><u><% key.replace('_', ' ') %></u></th>
+                                <th v-for="label in curve.RiskLabels"><% label %></th>
+                            </tr>
+                            <tr>
+                                <th class="curve-bid text-center">BID (% a.a.)</th>
+                                <td class="curve-bid text-center" v-for="bid in curve.RatesBid"><% percentage(bid) %></td>
+                            </tr>
+                            <tr>
+                                <th class="curve-offer text-center">OFFER (% a.a.)</th>
+                                <td class="curve-offer text-center" v-for="offer in curve.RatesOffer"><% percentage(offer) %></td>
+                            </tr>
+                        </table>
+                        <h6 class="small h6-margin">Last Update: <span style="color: black; background-color: rgb(255, 198, 129) !important; border-color: #FF9E2A !important; margin-left: 1px; border: 1px solid; border-radius: 0.2rem; font-weight: bold;"><% curve.LastUpdate %></span></h6>
+                    </template>
+                </div>
+            </div>
+        </div>
+{% endblock %}
+
+{% block trading_status %}
+    {% include 'status-trading-supplier.html' %}
+{% endblock trading_status %}
+
+{% block script_eof %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#nav-items li').removeClass('active');
+            $('#nav-item-control').addClass('active');
+        });
+    </script>
+{% endblock %}

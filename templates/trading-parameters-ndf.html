@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Trading Parameters NDF{% endblock %}
+
+{% block head %}
+    <script src="/static/number-input.js"></script>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            currency_keys_vue_obj = new SimpleApplyConfig({
+                el: '#div_currency_keys',
+                delimiters: ["<%","%>"],
+                data: {
+                    currency_keys: {{ currency_keys|safe }},
+                    sorted_currencies: {{ sorted_currencies|safe }},
+                },
+                methods: {
+                    validated: function() {
+                        let i;
+                        for (i = 0; i < this.sorted_currencies.length; i++) {
+                            let ccy = this.sorted_currencies[i]
+
+                            if (!this.validated_string_input(this.currency_keys[ccy].FXNDF.MaximumAmountAutoFlow)) {
+                                alert('The value for the Maximum Amount AutoFlow field is invalid for the currency: ' + ccy)
+                                return false
+                            }
+
+                            if (!this.validated_string_input(this.currency_keys[ccy].FXNDF.MinimumAmountAutoFlow)) {
+                                alert('The value for the Minimum Amount AutoFlow field is invalid for the currency: ' + ccy)
+                                return false
+                            }
+
+                            if (!this.validated_string_input(this.currency_keys[ccy].FXNDF.LowerLimitRevenue)) {
+                                alert('The value for the Minimum Limit Revenue field is invalid for the currency: ' + ccy)
+                                return false
+                            }
+
+                            if (!this.validated_string_input(this.currency_keys[ccy].FXNDF.UpperLimitDays2Maturity)) {
+                                alert('The value for the Maximum Days to Maturity field is invalid for the currency: ' + ccy)
+                                return false
+                            }
+                        }
+
+                        return true
+                    },
+                    submit: function(event) {
+                        if (!this.validated()) {
+                            return
+                        }
+
+                        let url = '/fxndf/currency-keys-ndf-put'
+                        let data = JSON.stringify({'currency_keys': this.currency_keys, })
+                        let error_msg = 'ops...! An error has occurred on Currency Keys NDF PUT call!'
+                        submitData(url, data, error_msg)
+                    },
+                },
+            })
+
+            counterparty_vue_obj = new SimpleApplyConfig({
+                el: '#div_counterparty_data',
+                delimiters: ["<%","%>"],
+                data: {
+                    counterparty_data: {{ counterparty_data|safe }},
+                    allow_validate: {{ allow_validate|safe }},
+                    enab_dis_data: ['ENABLED', 'DISABLED'],
+                    no_yes_data: {{ validate_parameters|safe }}
+                },
+                methods: {
+                    submit: function(event) {
+                        let date = new Date()
+                        let month = String(date.getMonth() + 1)
+                        if (month.length == 1) {
+                            month = '0' + month
+                        }
+
+                        let day = String(date.getDate())
+                        if (day.length == 1) {
+                            day = '0' + day
+                        }
+
+                        today_str = date.getFullYear() + '-' + month + '-' + day
+
+                        for (let i = 0; i < this.counterparty_data.length; i++) {
+                            let cter_party = this.counterparty_data[i]
+
+                            let validate_kyc = cter_party.validate_kyc
+                            if (validate_kyc == 'NO: GOOD-TODAY') {
+                                cter_party.validate_kyc = 'NO: GOOD-TODAY|' + today_str
+                            }
+
+                            let validate_isda = cter_party.validate_isda
+                            if (validate_isda == 'NO: GOOD-TODAY') {
+                                cter_party.validate_isda = 'NO: GOOD-TODAY|' + today_str
+                            }
+                        }
+
+                        let my_reload_function = () => {
+                            for (let i = 0; i < this.counterparty_data.length; i++) {
+                                let cter_party = this.counterparty_data[i]
+
+                                let validate_kyc = cter_party.validate_kyc
+                                if (validate_kyc.startsWith('NO: GOOD-TODAY')) {
+                                    cter_party.validate_kyc = 'NO: GOOD-TODAY'
+                                }
+
+                                let validate_isda = cter_party.validate_isda
+                                if (validate_isda.startsWith('NO: GOOD-TODAY')) {
+                                    cter_party.validate_isda = 'NO: GOOD-TODAY'
+                                }
+                            }
+                        }
+
+                        let url = '/fxndf/counterparty-ndf-put'
+                        let data = JSON.stringify({'counterparty_data': this.counterparty_data, })
+                        let error_msg = 'ops...! An error has occurred on Counterparty NDF PUT call!'
+                        submitData(url, data, error_msg, my_reload_function)
+                    }
+                }
+            })
+
+            $("#idApplyChanges").click(() => {
+                let vue_arr = [counterparty_vue_obj, currency_keys_vue_obj]
+                for (var ind in vue_arr) {
+                    vue_arr[ind].save()
+                }
+            })
+        });
+    </script>
+
+    <style type="text/css">
+        .bg-danger {
+            color: #FFF;
+        }
+
+        .xsucess {
+            color: #FFF;
+        }
+
+        select {
+            background: transparent;
+            text-align-last:center;
+        }
+
+        select > option {
+            background-color: #FF9E2A;
+            color: black;
+        }
+
+        .input_spread:focus {
+            background: #E74C3C !important;
+        }
+
+        .txtstrongsuccess {
+            color: #00bc8c !important;
+        }
+
+        .input_focus:focus {
+            color: black !important;
+        }
+    </style>
+{% endblock %}
+
+{% block halt %}
+    {% include 'halt-ndf.html' %}
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        <div class="row ">
+            <div class="col">
+                <div class="col-7 mb-3 small" id="div_currency_keys">
+                    <div class="row flex-row flex-nowrap align-self-start">
+                        <table align="right" class="table table-bordered table-sm mt-2" style="font-size: 12px;">
+                            <thead>
+                                <tr class="header text-center">
+                                    <th></th>
+                                    <th style="width: fit-content;" colspan="4">Auto Flow Limits</th>
+                                </tr>
+                                <tr class="header text-center">
+                                    <th>Currency</th>
+                                    <th>Max Amount</th>
+                                    <th>Min Amount</th>
+                                    <th>Min Revenue</th>
+                                    <th>Max Days to Maturity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="text-center" v-for="(ccy, ind) in sorted_currencies">
+                                    <th style="width: 9.5rem;"><% ccy %></th>
+                                    <td class="bg-orange" style="width: fit-content">
+                                        <number_input v-on:input="onchange_value" v-model.number="currency_keys[ccy].FXNDF.MaximumAmountAutoFlow" :decimalplaces="2" class="input_spread border-0 col text-center bg-transparent w-100">
+                                    </td>
+                                    <td class="bg-orange" style="width: fit-content">
+                                        <number_input v-on:input="onchange_value" v-model.number="currency_keys[ccy].FXNDF.MinimumAmountAutoFlow" :decimalplaces="2" class="input_spread border-0 col text-center bg-transparent w-100">
+                                    </td>
+                                    <td class="bg-orange" style="width: fit-content">
+                                        <number_input v-on:input="onchange_value" v-model.number="currency_keys[ccy].FXNDF.LowerLimitRevenue" :decimalplaces="2" class="input_spread border-0 col text-center bg-transparent w-100">
+                                    </td>
+                                    <td class="bg-orange" style="width: fit-content">
+                                        <number_input v-on:input="onchange_value" v-model.number="currency_keys[ccy].FXNDF.UpperLimitDays2Maturity" :decimalplaces="0" class="input_spread border-0 col text-center bg-transparent w-100">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            &nbsp;
+        </div>
+
+        <div class="row" id="div_counterparty_data">
+            <div class="col">
+                <table id="param_auto_trading_by_cp_table" class="table table-bordered table-sm small mt-2 text-primary">
+                    <thead>
+                        <tr class="header text-center table-th-25">
+                            <th colspan="6">Parameterization of Automatic Trading by Counterparty</th>
+                        </tr>
+                        <tr class="header text-center table-th-25">
+                            <th style="min-width: 40%" >Counterparty</th>
+                            <th style="min-width: 10%" >CNPJ</th>
+                            <th style="min-width: 10%" >Upper Limit DC</th>
+                            <th style="min-width: 10%" >Automatic Flow</th>
+                            <th style="min-width: 15%" >Validate KYC</th>
+                            <th style="min-width: 15%" >Validate ISDA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="text-center" v-for="cter_party in counterparty_data">
+                            <td><% cter_party.counterparty %></td>
+                            <td><% cter_party.cter_prty_id | formatCNPJ %></td>
+                            <td>
+                                <input v-on:change="onchange_value" v-model.number="cter_party.upper_limit_dc" class="text-primary border-0 col text-center input_spread bg-transparent input_focus">
+                            </td>
+                            <td>
+                                <select v-bind:class="cter_party.automatic_flow === 'ENABLED' ? 'txtstrongsuccess' : 'txtdanger'" v-on:change="onchange_value" v-model="cter_party.automatic_flow" class="border-0 col text-center font-weight-bold">
+                                    <option v-for="val in enab_dis_data" :value="val" :selected="cter_party.automatic_flow == val">
+                                        <% val %>
+                                    </option>
+                                </select>
+                            </td>
+                            <td>
+                                <select v-if="allow_validate === true" v-bind:class="cter_party.validate_kyc === 'YES' ? 'txtstrongsuccess' : 'txtdanger'" v-on:change="onchange_value" v-model="cter_party.validate_kyc" class="border-0 col text-center font-weight-bold">
+                                    <option v-for="val in no_yes_data" :value="val" :selected="cter_party.validate_kyc == val">
+                                        <% val %>
+                                    </option>
+                                </select>
+                                <select v-else class="border-0 col text-center font-weight-bold txtstrongsuccess" :disabled="true">
+                                    <option v-for="val in no_yes_data" v-if="cter_party.validate_kyc == val">
+                                        <% val %>
+                                        </option>
+                                </select>
+                            </td>
+                            <td>
+                                <select v-if="allow_validate === true" v-bind:class="cter_party.validate_isda === 'YES' ? 'txtstrongsuccess' : 'txtdanger'" v-on:change="onchange_value" v-model="cter_party.validate_isda" class="border-0 col text-center font-weight-bold">
+                                    <option v-for="val in no_yes_data" :value="val" :selected="cter_party.validate_isda == val">
+                                        <% val %>
+                                    </option>
+                                </select>
+                                <select v-else class="border-0 col text-center font-weight-bold txtstrongsuccess" :disabled="true">
+                                    <option v-for="val in no_yes_data" v-if="cter_party.validate_isda == val">
+                                        <% val %>
+                                    </option>
+                                </select>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+{% endblock %}
+
+{% block trading_status %}
+    {% include 'status-trading-ndf.html' %}
+{% endblock trading_status %}
+
+{% block script_eof %}
+    <link rel="stylesheet" type="text/css" href="/static/DataTables/datatables.min.css"/>
+    <script type="text/javascript" src="/static/DataTables/datatables.min.js"></script>
+    
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#nav-items li').removeClass('active');
+            $('#nav-item-trading_parameters').addClass('active');
+
+            $('#param_auto_trading_by_cp_table').DataTable({
+                "paging":         false,
+                "order":          [[ 0, 'asc']],
+                "ordering":       true,
+                "info":           false,
+                "searching":      true,
+                "fixedHeader":    true,
+                "scrollCollapse": true,
+                "scrollY":        "40vh",
+                "columnDefs": [
+                    {"orderable": false, "targets": [1, 2, 3, 4, 5]},
+                ],
+            });
+        });
+    </script>
+{% endblock %}

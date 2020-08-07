@@ -1,0 +1,204 @@
+{% extends "base-popup.html" %}
+
+<!-- Begin page content -->
+{% block head %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            var app = new Vue({
+                el: '#vue_main_div',
+                delimiters: ['[[', ']]'],
+                data: {
+                    deal_id: null,
+                    cnpj: null,
+                    side: null,
+                    amount: null,
+                    client_rate: null,
+                },
+                methods: {
+                    valid_data: function(x) {
+                        return typeof(x) !== "undefined" || x !== null
+                    }
+                },
+                beforeMount(){
+                    this.deal_id = {{ deal_id | safe }}
+
+                    this.side = '{{ info.client_side | safe }}'
+                    if (this.side === '1') {
+                        this.side = 'SELL'
+                    } else if (this.side === '2') {
+                        this.side = 'BUY'
+                    } else if (this.side === '0') {
+                        this.side = '2WAY'
+                    }
+
+                    this.cnpj = '{{ info.cnpj | safe }}'
+
+                    this.amount = {{ info.amount | safe }}
+
+                    let sell = '{{ info.sell | safe }}'
+                    let buy = '{{ info.buy | safe }}'
+                    if (this.valid_data(sell) && sell && sell != '-') {
+                        this.client_rate = sell
+                    } else if (this.valid_data(buy) && buy && buy != '-') {
+                        this.client_rate = buy
+                    } else {
+                        this.client_rate = '-'
+                    }
+
+                    this.spread = '{{ info.spread | safe }}'
+                    if (this.valid_data(this.spread) && this.spread) {
+                        try {
+                            this.spread = parseInt(parseFloat(this.spread) * 10000)
+                        } catch (e) {
+                            this.spread = '-'
+                        }
+                    } else {
+                        this.spread = '-'
+                    }
+                },
+            });
+        });
+    </script>
+
+    <style>
+        table {
+            table-layout: fixed;
+            word-wrap: break-word;
+        }
+    </style>
+{% endblock %}
+
+{% block main %}
+    <div id="vue_main_div" class="container-fluid">
+        {% if info.rejected_text %}
+            <div class="bs-component small ml-3 mr-3">
+                <div class="alert alert-dismissible alert-danger">
+                    <strong>Rejected: </strong> {{ info.rejected_text }}.
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="row m-0 mb-3 small">
+            <div class="col-md-6 text-white d-flex align-items-start flex-column">
+                <table class="table table-bordered table-hover table-sm">
+                    <tr class="header text-center">
+                        <th>Deal ID</th>
+                        <td>[[ deal_id ]]</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th>Timestamp</th>
+                        <td>{{ info.timestamp }}</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th>DealCode</th>
+                        <td>{{ info.dealcode }}</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th>Counterparty</th>
+                        <td>{{ info.counterparty }}</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th>CNPJ</th>
+                        <td>[[ cnpj | formatCNPJ ]]</td>
+                    </tr>
+                </table>
+
+                <table class="table table-bordered table-hover table-sm">
+                    <tr class="header text-center">
+                        <th>Side</th>
+                        <td>
+                            [[ side ]]
+                        </td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th>Symbol</th>
+                        <td>{{ info.symbol }}</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th>Currency</th>
+                        <td>{{ info.currency }}</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th>Amount</th>
+                        <td>{{ "{:,.2f}".format(info.amount) }}</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th>Settlement BRL</th>
+                        <td>{{ info.settlement_brl }}</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th>Settlement CCY</th>
+                        <td>{{ info.settlement_ccy }}</td>
+                    </tr>
+                </table>
+
+                <table class="table table-bordered table-hover table-sm">
+                    <tr class="header text-center">
+                        <th>Spot</th>
+                        <td>
+                            {% if info.s_cost %}
+                                {{ info.s_cost }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th>Client Spread (pips)</th>
+                        <td>
+                            [[ spread ]]
+                        </td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th>Client Rate</th>
+                        <td>
+                            [[ client_rate ]]
+                        </td>
+                    </tr>
+                </table>
+
+                <table class="table table-bordered table-hover table-sm">
+                    <tr class="header text-center">
+                        <th>Revenue (BRL)</th>
+                        <td>
+                            {% if info.revenue %}
+                                {{ "{:,.2f}".format(info.revenue) }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+        		</table>
+        		
+                <table class="table table-bordered table-hover table-sm">
+                    <tr class="header text-center">
+                        <th>Validate (KYC)</th>
+                        <td>
+                            {% if info.validate_kyc %}
+                                {{ info.validate_kyc }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th>Notes</th>
+                        <td>
+                            {% if info.notes %}
+                                {{ info.notes }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="col-md-6 text-white d-flex align-items-end flex-column mt-auto">
+                <!--
+                    Aqui corresponde a coluna da direita!
+                -->
+            </div>
+        </div>
+    </div>
+{% endblock %}

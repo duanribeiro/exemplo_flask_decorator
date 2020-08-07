@@ -1,0 +1,92 @@
+{% extends "base-popup.html" %}
+
+<!-- Begin page content -->
+{% block head %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            var app = new SimpleApplyConfig({
+                el: '#vue_main_div',
+                delimiters: ['[[', ']]'],
+                data: {
+                    holidays: {{ holidays|safe }},
+                    currency: {{ currency|safe }}
+                },
+                beforeMount: function() {
+                },
+                methods: {
+                    submit: function(event) {
+                        console.log('Nothing to submit yet...!');
+                    },
+                    importCalendar: function(event) {
+                        $('#calendar-input').trigger('click')
+                    },
+                    calendarUpload: function(name, files) {
+                        let formData = new FormData()
+                        let myCurrency = this.currency
+                        $.each(files, function(key, value) {
+                            formData.append(key, value)
+                        })
+                        $.ajax({
+                            url: '/fxconfig/calendar-cur-post/' + myCurrency,
+                            type: 'post',
+                            contentType: false,
+                            cache: false,
+                            data: formData,
+                            processData: false,
+                            success: function(data, textStatus, jQxhr) {
+                                let status = data['status']
+                                if( !status.includes('ok') ) {
+                                    alert('The calendar importing was unsuccessful!')
+                                    console.log('Exception: ' + data['exception'])
+                                } else {
+                                    location.reload()
+                                }
+
+                                console.log('success response: ' + status);
+                            },
+                            error: function(jqXhr, textStatus, errorThrown){
+                                alert(error_msg)
+                            }
+                        })
+                    },
+                },
+            })
+        })
+    </script>
+{% endblock %}
+
+{% block main %}
+    <div id="vue_main_div" class="container-fluid">
+        <div class="row m-0 mb-2 mt-2 small d-flex justify-content-center mx-auto text-white w-50">
+            <div class="card d-block mr-2 h-auto p-3 mt-3 mb-3 table-responsive">
+                <table class="table table-bordered table-hover table-sm small mb-3 mt-2">
+                    <tr class="header text-center">
+                        <th class="w-25">Currency:</th>
+                        <td class="w-25 align-middle">[[ currency ]]</td>
+                        <td class="w-15 float-right mr-3 p-0 border-0">
+                            <button class="btn btn-sm small w-min bg-orange text-white m-0" v-on:click="importCalendar">Import Calendar</button>
+                            <input type="file" id="calendar-input" @change="calendarUpload($event.target.name, $event.target.files)" class="input-file" style="display: none;">
+                        </td>
+                    </tr>
+                </table>
+                <table class="table table-bordered table-hover table-sm small mb-2">
+                    <thead class="header text-center">
+                        <tr>
+                            <th class="w-25">Date (yyyy-mm-dd):</th>
+                            <th class="w-25">Name:</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-center">
+                        <tr v-for="holiday in holidays">
+                            <td class="w-25">[[ holiday.date ]]</td>
+                            <td class="w-25">[[ holiday.name ]]</td>
+                        </tr>
+                        <tr v-if="Object.keys(holidays).length === 0">
+                            <td class="w-50" colspan="2">No Holiday available!</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

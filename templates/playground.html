@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <script src="/static/vue.js"></script>
+
+    <script type="text/javascript">
+
+        pessoas = {
+            '31665221828': {
+                'nome': 'hugo',
+                'idade': 10
+            },
+            '36172833123': {
+                'nome': 'juarez',
+                'idade': 60
+            }
+        };
+
+        check_spot_limits_initialized = function() {
+            $.getJSON( "/fxspot/check_spot_limits_initialized", function(data) {
+                if (data == false) {
+                    $('#spot_limits_alert').modal('show')
+                }
+            });
+        }
+
+        window.onload = function () {
+
+            {% if session.role == 'e-sales spot' %}
+                setTimeout(function(){ check_spot_limits_initialized() }, 2000);
+            {% endif %}
+
+
+
+            
+            // app = new Vue({
+            //     el: '#root',
+            //     delimiters: ["<%","%>"],
+            //     data: {
+            //         pessoas: pessoas
+                    
+            //     },
+            //     created() {
+            //         //this.setupStream();
+            //     },
+            //     methods: {
+
+            //     }
+            // });
+
+
+            // return setInterval(function(){
+            //     console.log(pessoas)
+            // }.bind(app), 5000);
+        };
+
+    </script>
+
+    <style type="text/css">
+        .teste {
+            background-color: transparent;
+            color:#FFF;
+        }
+
+        .teste:focus {
+            background: yellow;
+            color: #000;
+        }
+    </style>
+{% endblock %}
+
+{% block main %}
+    x{{ session.role }}x
+
+    <!-- Modal -->
+    <div class="modal fade" id="spot_limits_alert" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                <h5 class="modal-title">Action Required!</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                </div>
+                <div class="modal-body">
+                    It's required to set the initial daily balance for FX Spot. You don't need to take an action now but the system will trade SPOT product only after the balances are set!
+                </div>
+                <div class="modal-footer">
+                    <a href="/fxspot/trading-parameters-spot">
+                        <button type="button" class="btn btn-primary">Update Now</button>
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Dismiss</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Button trigger modal -->
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#spot_limits_alert">
+        Launch demo modal
+    </button>
+
+{% endblock %}
+
+{% block script_eof %}
+
+{% endblock %}

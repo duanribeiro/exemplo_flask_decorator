@@ -1,0 +1,153 @@
+{
+    "NDF": {
+        "USD": {
+            "Buy": {
+                "PartialPV": [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                "TotalPV": 0.00,
+                "PartialAmount": [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                "TotalAmount": 0.00
+            },
+            "Sell": {
+                "PartialPV": [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                "TotalPV": 0.00,
+                "PartialAmount": [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                "TotalAmount": 0.00
+            },
+            "TotalAmount": 0.00,
+            "NetPV": 0.00,
+            "NetPV_BRL": 0.00,
+            "NetAmount": 0.00,
+            "Revenue_BRL": 0.00
+        },
+        "EUR": {
+            "Buy": {
+                "PartialPV": [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                "TotalPV": 0.00,
+                "PartialAmount": [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                "TotalAmount": 0.00
+            },
+            "Sell": {
+                "PartialPV": [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                "TotalPV": 0.00,
+                "PartialAmount": [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                "TotalAmount": 0.00
+            },
+            "TotalAmount": 0.00,
+            "NetPV": 0.00,
+            "NetPV_BRL": 0.00,
+            "NetAmount": 0.00,
+            "Revenue_BRL": 0.00
+        },
+        "JPY": {
+            "Buy": {
+                "PartialPV": [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                "TotalPV": 0.00,
+                "PartialAmount": [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                "TotalAmount": 0.00
+            },
+            "Sell": {
+                "PartialPV": [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                "TotalPV": 0.00,
+                "PartialAmount": [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+                "TotalAmount": 0.00
+            },
+            "TotalAmount": 0.00,
+            "NetPV": 0.00,
+            "NetPV_BRL": 0.00,
+            "NetAmount": 0.00,
+            "Revenue_BRL": 0.00
+        }
+    },
+    "SPOT": {
+        "USD": {
+            "TotalAmount": {
+                "BuyD0": 0.00,
+                "BuyD1": 0.00,
+                "BuyD2": 0.00,
+                "SellD0": 0.00,
+                "SellD1": 0.00,
+                "SellD2": 0.00
+            },
+            "TotalRevenue": {
+                "BuyD0": 0.00,
+                "BuyD1": 0.00,
+                "BuyD2": 0.00,
+                "SellD0": 0.00,
+                "SellD1": 0.00,
+                "SellD2": 0.00
+            }
+        },
+        "EUR": {
+            "TotalAmount": {
+                "BuyD0": 0.00,
+                "BuyD1": 0.00,
+                "BuyD2": 0.00,
+                "SellD0": 0.00,
+                "SellD1": 0.00,
+                "SellD2": 0.00
+            },
+            "TotalRevenue": {
+                "BuyD0": 0.00,
+                "BuyD1": 0.00,
+                "BuyD2": 0.00,
+                "SellD0": 0.00,
+                "SellD1": 0.00,
+                "SellD2": 0.00
+            }
+        },
+        "JPY": {
+            "TotalAmount": {
+                "BuyD0": 0.00,
+                "BuyD1": 0.00,
+                "BuyD2": 0.00,
+                "SellD0": 0.00,
+                "SellD1": 0.00,
+                "SellD2": 0.00
+            },
+            "TotalRevenue": {
+                "BuyD0": 0.00,
+                "BuyD1": 0.00,
+                "BuyD2": 0.00,
+                "SellD0": 0.00,
+                "SellD1": 0.00,
+                "SellD2": 0.00
+            }
+        },
+        "CHF": {
+            "TotalAmount": {
+                "BuyD0": 0.00,
+                "BuyD1": 0.00,
+                "BuyD2": 0.00,
+                "SellD0": 0.00,
+                "SellD1": 0.00,
+                "SellD2": 0.00
+            },
+            "TotalRevenue": {
+                "BuyD0": 0.00,
+                "BuyD1": 0.00,
+                "BuyD2": 0.00,
+                "SellD0": 0.00,
+                "SellD1": 0.00,
+                "SellD2": 0.00
+            }
+        },
+        "GBP": {
+            "TotalAmount": {
+                "BuyD0": 0.00,
+                "BuyD1": 0.00,
+                "BuyD2": 0.00,
+                "SellD0": 0.00,
+                "SellD1": 0.00,
+                "SellD2": 0.00
+            },
+            "TotalRevenue": {
+                "BuyD0": 0.00,
+                "BuyD1": 0.00,
+                "BuyD2": 0.00,
+                "SellD0": 0.00,
+                "SellD1": 0.00,
+                "SellD2": 0.00
+            }
+        }
+    }
+}

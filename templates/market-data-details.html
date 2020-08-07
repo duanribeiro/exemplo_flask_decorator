@@ -1,0 +1,71 @@
+            </div>
+{% extends "base-popup.html" %}
+
+{% block head %}
+    <script src="/static/moment.js"></script>
+
+    <script type="text/javascript">
+        window.onload = function () {
+            Vue.filter('formatDate', function(value) {
+                if(value) {
+                    return moment(String(value)).format('DD/MM/YYYY')
+                }
+            })
+            Vue.filter('makePercentage', function(value) {
+                return (value * 100.0).toFixed(6)
+            })
+            app = new Vue({
+                el: '#div_curve',
+                delimiters: ["<%","%>"],
+                data: {
+                    data_curve: null,
+                },
+                methods: {
+                    pooling: function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxsupplier/market_data', _data => {
+                                let data = JSON.parse(_data);
+                                this.data_curve = data['{{ curve_code }}'];
+                                this.$forceUpdate()
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 8000 ? 1 : 8000 - requestTime
+                                setTimeout(() => { this.pooling() }, waitTime)
+                            })
+                    },
+                    popup_curva_detalhes(curve_code) {
+                        var myWindow = window.open("/fxsupplier/market-data/details/" + curve_code, "", "width=800,height=500");
+                    }
+                },
+                beforeMount() {
+                    this.pooling();
+                }
+            });
+        };
+    </script>
+{% endblock %}
+
+{% block main %}
+    <div class="card m-1">
+        <div id="div_curve" class="card-body">
+            <template v-if="data_curve">
+            <h5 class="card-title">{{ curve_code }} Curve</h5>
+                <table class="table table-bordered table-sm small mt-2">
+                    <thead>
+                        <tr class="header text-center">
+                            <th>Tenor</th>
+                            <th>Bid Rate (%aa)</th>
+                            <th>Offer Rate (%aa)</th>
+                        </tr>
+                    </thead>
+                    <tr v-for="(date, index) in data_curve.dates" class="text-center">
+                        <td><% date | formatDate %></td>
+                        <td class="text-success"><% data_curve.rates_bid[index] | makePercentage %></td>
+                        <td class="text-danger"><% data_curve.rates_offer[index] | makePercentage %></td>
+                    </tr>
+                </table>
+            </template>
+        </div>
+    </div>
+{% endblock %}

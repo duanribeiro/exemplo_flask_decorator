@@ -1,0 +1,37 @@
+<button id="halt-button" type="button" class="btn btn-danger btn-sm small halt-button" data-toggle="modal" data-target="#idHaltModal">
+    HALT TRADING
+</button>
+
+<div class="modal fade" id="idHaltModal" tabindex="-1" role="dialog" aria-labelledby="idHaltModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold" style="color: var(--red);" id="idHaltModalLabel">Halt SPOT Trading</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input id="halt-all" type="checkbox" data-toggle="toggle" data-off="Off" data-on="On" data-offstyle="danger" data-onstyle="success" data-width="75">
+                <label for="halt-all" style="margin-left: 10px; color: #FFFFFF; font-weight: bold;">ALL</label>
+                <br />
+                <br />
+                <input id="halt-d0" type="checkbox" data-toggle="toggle" data-off="Off" data-on="On" data-offstyle="danger" data-onstyle="success" data-width="75">
+                <label for="halt-d0" style="margin-left: 10px; color: #FFFFFF; font-weight: bold;">D+0</label>
+                <br />
+                <br />
+                <input id="halt-d1" type="checkbox" data-toggle="toggle" data-off="Off" data-on="On" data-offstyle="danger" data-onstyle="success" data-width="75">
+                <label for="halt-d1" style="margin-left: 10px; color: #FFFFFF; font-weight: bold;">D+1</label>
+                <br />
+                <br />
+                <input id="halt-d2" type="checkbox" data-toggle="toggle" data-off="Off" data-on="On" data-offstyle="danger" data-onstyle="success" data-width="75">
+                <label for="halt-d2" style="margin-left: 10px; color: #FFFFFF; font-weight: bold;">D+2</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link href="/static/toggle/bootstrap4-toggle.min.css" rel="stylesheet"/>
+<script src="/static/toggle/bootstrap4-toggle.min.js"></script>
+<script src="/static/scripts/halt-spot.js"></script>
+

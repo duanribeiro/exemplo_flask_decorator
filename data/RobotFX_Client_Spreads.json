@@ -1,0 +1,578 @@
+{
+    "GroupSpreads": {
+        "PETRO": {
+            "FXSPOT": {
+                "CHF": {
+                    "BUY": [null, null, null],
+                    "SELL": [null, null, null]
+                },
+                "EUR": {
+                    "BUY": [0.0014, 0.0013, 0.0012],
+                    "SELL": [0.0014, 0.0013, 0.0012]
+                },
+                "GBP": {
+                    "BUY": [null, null, null],
+                    "SELL": [null, null, null]
+                },
+                "JPY": {
+                    "BUY": [null, null, null],
+                    "SELL": [null, null, null]
+                },
+                "USD": {
+                    "BUY": [0.0016, 0.001, 0.0012],
+                    "SELL": [0.0015, 0.0013, 0.0012]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.0015, 0.0013, 0.001, 0.0012, 0.0013, 0.0014]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.0015, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    }
+                }
+            }
+        },
+        "EMBRA": {
+            "FXSPOT": {
+                "USD": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                },
+                "CHF": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "JPY": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "GBP": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "EUR": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    }
+                }
+            }
+        },
+        "BANBRA": {
+            "FXSPOT": {
+                "USD": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                },
+                "CHF": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "JPY": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "GBP": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "EUR": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    }
+                }
+            }
+        }
+    },
+    "CounterpartySpreads": {
+        "12345671000400": {
+            "FXSPOT": {
+                "USD": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.005]
+                },
+                "CHF": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "JPY": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "GBP": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "EUR": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    }
+                }
+            }
+        },
+        "12345671000104": {
+            "FXSPOT": {
+                "USD": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                },
+                "CHF": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "JPY": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "GBP": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "EUR": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    }
+                }
+            }
+        },
+        "12345671000105": {
+            "FXSPOT": {
+                "USD": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                },
+                "CHF": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "JPY": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "GBP": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "EUR": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.0011, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    }
+                }
+            }
+        },
+        "12345671000102": {
+            "FXSPOT": {
+                "USD": {
+                    "SELL": [0.002, 0.002, 0.002],
+                    "BUY": [0.001, 0.001, 0.001]
+                },
+                "CHF": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "JPY": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "GBP": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "EUR": {
+                    "SELL": [0.001, 0.001, 0.001],
+                    "BUY": [0.001, 0.001, 0.001]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.003, 0.003, 0.002, 0.002, 0.002, 0.002]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
+                    }
+                }
+            }
+        },
+        "12345671000103": {
+            "FXSPOT": {
+                "USD": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                },
+                "CHF": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "JPY": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "GBP": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "EUR": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.0012, 0.0014, 0.001, 0.0012, 0.0013, 0.0014]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.0013, 0.0015, 0.001, 0.0012, 0.0013, 0.0014]
+                    }
+                }
+            }
+        },
+        "12345671000101": {
+            "FXSPOT": {
+                "USD": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                },
+                "CHF": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "JPY": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "GBP": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "EUR": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    }
+                }
+            }
+        },
+        "12345671000201": {
+            "FXSPOT": {
+                "USD": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                },
+                "CHF": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "JPY": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "GBP": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "EUR": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    }
+                }
+            }
+        },
+        "12345671000202": {
+            "FXSPOT": {
+                "USD": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                },
+                "CHF": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "JPY": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "GBP": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "EUR": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    }
+                }
+            }
+        },
+        "12345671000301": {
+            "FXSPOT": {
+                "USD": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                },
+                "CHF": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "JPY": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "GBP": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "EUR": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    }
+                }
+            }
+        },
+        "12345671000302": {
+            "FXSPOT": {
+                "USD": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                },
+                "CHF": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "JPY": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "GBP": {
+                    "SELL": [null, null, null],
+                    "BUY": [null, null, null]
+                },
+                "EUR": {
+                    "SELL": [0.0014, 0.0013, 0.0012],
+                    "BUY": [0.0014, 0.0013, 0.0012]
+                }
+            },
+            "FXNDF": {
+                "Buckets": [60, 90, 120, 180, 360, 720],
+                "Spreads": {
+                    "USD": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    },
+                    "CHF": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "JPY": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "GBP": {
+                        "BUYSELL": [null, null, null, null, null, null]
+                    },
+                    "EUR": {
+                        "BUYSELL": [0.001, 0.001, 0.001, 0.0012, 0.0013, 0.0014]
+                    }
+                }
+            }
+        }
+    }
+}

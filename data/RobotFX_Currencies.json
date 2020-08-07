@@ -1,0 +1,38 @@
+{
+    "BRL": {
+        "Name": "Real Brasileiro",
+        "CodeBACEN": 790,
+        "Precision": 4,
+        "Type": "A",
+        "Calendar": "Holydays_BRL",
+        "DiscountCurve": "PRE",
+        "ViewPriority": 0
+    },
+    "USD": {
+        "Name": " United States Dollar",
+        "CodeBACEN": 220,
+        "Precision": 4,
+        "Type": "A",
+        "Calendar": "Holydays_USD",
+        "DiscountCurve": "USD_Onshore",
+        "ViewPriority": 1
+    },
+    "EUR": {
+        "Name": " Euro",
+        "CodeBACEN": 978,
+        "Precision": 4,
+        "Type": "B",
+        "Calendar": "Holydays_EUR",
+        "DiscountCurve": "EUR_Onshore",
+        "ViewPriority": 2
+    },
+    "JPY": {
+        "Name": " Japonese Yen",
+        "CodeBACEN": 470,
+        "Precision": 6,
+        "Type": "A",
+        "Calendar": "Holydays_JPY",
+        "DiscountCurve": "JPY_Onshore",
+        "ViewPriority": 3
+    }
+}

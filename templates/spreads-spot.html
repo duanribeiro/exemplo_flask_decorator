@@ -1,0 +1,492 @@
+{% extends "base.html" %}
+{% block title %}Spreads SPOT{% endblock %}
+
+{% block head %}
+    <script src="/static/typeahead.bundle.min.js"></script>
+    <script src="/static/entity_search_typehead.js"></script>
+    <script type="text/javascript" src="/static/robotmarketdata.js"></script>
+
+    <script src="/static/number-input.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="/static/typehead.css">
+
+    <script type="text/javascript">
+        var app_spreads;
+        legal_entities = {{ legal_entities|safe }};
+
+        groups = legal_entities.Groups;
+        counterparties = legal_entities.Counterparties;
+        searching_for_group = true;
+
+        set_typehead = function(){
+            search_group_or_counterparty =
+                new SearchGroupOrCounterparty(
+                    '#search_group_or_counterparty',
+                    searching_for_group,
+                    searching_for_group ? groups : counterparties);
+
+            search_group_or_counterparty.init()
+
+            $('#search_group_or_counterparty').bind('typeahead:selected', function(obj, datum, name) {
+                identification = '';
+                key = search_group_or_counterparty.search_map[datum];
+
+                if (searching_for_group) {
+                    var e = groups[key];
+                    identification = e['NameHolding'];
+                }
+                else {
+                    var e = counterparties[key];
+                    let cnpj = key
+                    let formatted_cnpj = cnpj.substr(0, 2) + '.' + cnpj.substr(2, 3) + '.' + cnpj.substr(5, 3) + '/' + cnpj.substr(8, 4) + '-' + cnpj.substr(12)
+                    identification = e['CounterpartyName'] + ' - ' + formatted_cnpj;
+                }
+
+                $('#entity_identification').html(identification);
+                $('#entity_identification').css({border: '1px solid', borderRadius: '2px', maxWidth: 'fit-content', fontWeight: 'bold'})
+
+                type = searching_for_group ? 'group' : 'counterparty';
+                url = '/fxspot/spreads-spot-get?search_by=' + type + '&key=' + key;
+
+                if (key != '') {
+                    $.ajax({
+                        url: url,
+                        dataType: 'json',
+                        type: 'get',
+                        contentType: 'application/json',
+                        processData: false,
+                        success: function(data, textStatus, jQxhr) {
+                            $("#entity_identification").show()
+                            app_spreads.only_change_my_data(data);
+                        },
+                        error: function(jqXhr, textStatus, errorThrown) {
+                            alert('ops...')
+                        }
+                    });
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            set_typehead();
+
+            get_string_spotdays = function(spotday) {
+                return 'd+' + spotday
+            }
+
+            var show_wrong_spread_message = function() {
+                let err = toastr.error("Only strictly positive values allowed!")
+                setTimeout(function() {
+                    $(err).hide()
+                }, 4000)
+            }
+
+            app_spreads = new SimpleApplyConfig({
+                el: '#div_table_spreads',
+                delimiters: ["<%","%>"],
+                data: {
+                    data: {
+                    },
+                    last_spread_event: -2,
+                },
+                computed: {
+                    empty_placeholder: function() {
+                        return '-'
+                    }
+                },
+                methods: {
+                    submit: function(event) {
+                        search_group = $('#SearchGroup').is(':checked');
+                        let entity_type = search_group ? 'group' : 'counterparty';
+                        let url = '/fxspot/spreads-spot-put?type=' + entity_type + '&key=' + key;
+                        let data = JSON.stringify({'spreads': this.data['spreads'],
+                                                   'status': this.data.status});
+                        error_msg = 'ops...!'
+                        submitData(url, data, error_msg)
+                        this.refresh_currencies()
+                    },
+                    refresh_currencies: function() {
+                        this.data.the_currencies = {}
+                        for (idx in this.data.currencies) {
+                            let cur = this.data.currencies[idx]
+                            this.data.the_currencies[cur] = {}
+                            this.data.the_currencies[cur]['BUY'] = this.data.spreads[cur].BUY.slice()
+                            this.data.the_currencies[cur]['SELL'] = this.data.spreads[cur].SELL.slice()
+                        }
+                    },
+                    render_loading: function(data) {
+                        this.$nextTick(() => {
+                            this.data = {}
+                            this.$nextTick(() => {
+                                this.data = data
+                                this.refresh_currencies()
+                            })
+                        })
+                    },
+                    modified_spread: function() {
+                        for (cur in this.data.the_currencies) {
+                            let types = ['BUY', 'SELL']
+                            for (idx in types) {
+                                let type = types[idx]
+                                let arr1 = this.data.the_currencies[cur][type]
+                                let arr2 = this.data.spreads[cur][type]
+
+                                if (arr1.length != arr2.length) {
+                                    return true
+                                }
+
+                                for (idx in arr1) {
+                                    if (!Object.is(arr1[idx], arr2[idx])) {
+                                        return true
+                                    }
+                                }
+                            }
+                        }
+
+                        return false
+                    },
+                    only_change_my_data: function(data) {
+                        data['changed_entity'] = true
+                        this.render_loading(data)
+                    },
+                    fill_status_data: function(currency, spotday, side, spread) {
+                        this.data.status = {}
+                        this.data.status['currency'] = currency
+                        this.data.status['spotday'] = spotday
+                        this.data.status['side'] = side
+                        this.data.status['spread'] = spread
+                    },
+                    onchange_spread: function(event, spotday, side,  currency) {
+                        if (!this.modified_spread()) {
+                            return
+                        }
+
+                        let spread = Object.is(event, null) ? '-' : event;
+
+                        if (event <= 0) {
+                            this.data.spreads[currency][side][spotday] = null
+                            if (spread != '-') {
+                                this.disableSimpleApplyConfig()
+                                if (event != this.last_spread_event) {
+                                    this.last_spread_event = event
+                                }
+
+                                if (Number(event) != 0) {
+                                    show_wrong_spread_message()
+                                }
+                            } else {
+                                this.enableSimpleApplyConfig()
+
+                                this.fill_status_data(currency, spotday, side, spread)
+                            }
+
+                            return
+                        } else {
+                            this.enableSimpleApplyConfig()
+                        }
+
+                        if (!this.data.changed_entity) {
+                            this.onchange_value(event);
+
+                            this.fill_status_data(currency, spotday, side, spread)
+                        }
+                    },
+                },
+                updated: function() {
+                    if (this.data.changed_entity) {
+                        this.data.changed_entity = false;
+                    }
+                }
+            });
+
+            app_dyn_table = new Vue({
+                el: '#div_table_options',
+                delimiters: ["<%","%>"],
+                data: {
+                    tableOption: 'GroupOption',
+                    group_initialized: false,
+                    group_transactions: [],
+                    group_thead: ['Group Name', 'Last Modified by', 'Date Last Modification',
+                                  'Last Modification: CCY', 'Last Modification: Spot Day',
+                                  'Side', 'Last Spread Inputed'],
+                    counterparty_initialized: false,
+                    counterparty_transactions: [],
+                    counterparty_thead: ['Group Name', 'Counterparty', 'CNPJ', 'Last Modified by',
+                                         'Date Last Modification', 'Last Modification: CCY',
+                                         'Last Modification: Spot Day', 'Side', 'Last Spread Inputed'],
+                },
+                methods: {
+                    pooling_counterparty: async function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxspot/spreads_spot_counterparty_transactions', _data => {
+                                let data = JSON.parse(_data);
+                                this.displayCounterpartyData(data)
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling_counterparty() }, waitTime)
+                            })
+                    },
+                    pooling_group: async function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxspot/spreads_spot_group_transactions', _data => {
+                                let data = JSON.parse(_data);
+                                this.displayGroupData(data)
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling_group() }, waitTime)
+                            })
+                    },
+                    displayGroupData: function(data) {
+                        if (!data.length) {
+                            return;
+                        }
+
+                        for (let i = 0; i < data.length; i++) {
+                            let el = data[i];
+                            el['spotday'] = get_string_spotdays(el['spotday']);
+                        }
+
+                        this.group_transactions = data;
+                    },
+                    displayCounterpartyData: function(data) {
+                        if (!data.length) {
+                            return;
+                        }
+
+                        for (let i = 0; i < data.length; i++) {
+                            let el = data[i];
+                            el['spotday'] = get_string_spotdays(el['spotday']);
+                        }
+
+                        this.counterparty_transactions = data;
+                    },
+                    open_a_popup: function(deal_id) {
+                        open_popup(deal_id)
+                    }
+                },
+                beforeMount(){
+                    this.pooling_counterparty();
+                    this.pooling_group();
+                },
+            });
+
+            $("#idApplyChanges").click(() => {
+                let vue_arr = [app_spreads]
+
+                for (var ind in vue_arr) {
+                    vue_arr[ind].save()
+                }
+            })
+
+            $('input[type=radio][name=SearchGroup]').change(function(){
+                $("#search_group_or_counterparty").val("");
+                $("#entity_identification").html("");
+                searching_for_group = $('#SearchGroup').is(':checked')
+                set_typehead();
+                app_spreads.data = { last_spread_event: -2, };
+                app_spreads.reset()
+                app_spreads.disableSimpleApplyConfig()
+                $("#entity_identification").hide()
+            });
+
+            init_market_data_panel('/fxsupplier/supplier_data/SPOT');
+        });
+
+    </script>
+
+    <style type="text/css">
+        @-moz-document url-prefix() {
+            #entity_identification {
+                width: max-content !important;
+                display: table !important;
+                margin-top: 0 !important;
+                margin-right: auto !important;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block halt %}
+    {% include 'halt-spot.html' %}
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        {% include 'panel-market-data-quotes.html' %}
+
+        <div class="row mt-2 p-2">
+            <div class="col">
+                <form class="form-inline small">
+                    <label for="staticEmail" class="col-sm-2 col-form-label text-left">Search:</label>
+                    <div id="bloodhound" class="col-2">
+                        <input type="text"  class="typeahead form-control form-control-sm bg-orange input_spread" id="search_group_or_counterparty" value="">
+                    </div>
+                    <div id="div_search_group" class="col-sm-6">
+                        <div class="custom-control custom-radio custom-control-inline custom-control-sm">
+                            <input type="radio" id="SearchGroup" name="SearchGroup" class="custom-control-input" checked>
+                            <label class="custom-control-label" for="SearchGroup">Group</label>
+                        </div>
+                        <div class="custom-control custom-radio custom-control-inline">
+                            <input type="radio" id="customRadioInline2" name="SearchGroup" class="custom-control-input">
+                            <label class="custom-control-label" for="customRadioInline2">Counterparty</label>
+                        </div>
+                    </div>
+                </form>
+
+                <form class="form-inline small">
+                    <label for="staticEmail" class="col-sm-2 col-form-label text-left">Name:</label>
+                    <div class="col-sm-10" style="margin-left: 1.3em" id="entity_identification"></div>
+                </form>
+
+                <div id="div_table_spreads">
+                    <table class="table table-bordered table-sm small mt-2" v-if="data['spreads']">
+                        <thead>
+                            <tr class="text-center">
+                                <th></th>
+                                <th colspan="3" class="font-weight-bold" style="color: #00bc8c !important;">BUY (pips)</th>
+                                <th colspan="3" class="font-weight-bold" style="color: #E74C3C !important;">SELL (pips)</th>
+                            </tr>
+                            <tr class="header text-center table-th-25">
+                                <th>Currency</th>
+                                <th v-for="n in 3">d+<% n-1 %></th>
+                                <th v-for="n in 3">d+<% n-1 %></th>
+                            </tr>
+                        </thead>
+                        <template v-if="data.currencies">
+                            <tbody v-if="data['spreads']">
+                                <tr class="text-center" v-for="(currency, index1) in data.currencies">
+                                    <td class="bg-orange"><% currency %></td>
+                                    <template v-for="side in ['BUY', 'SELL']">
+                                        <td class="bg-orange" v-for="(spread, index2) in data['spreads'][currency][side]">
+                                           <number_input :id="'field-spread-' + side + '-' + currency + '-' + index2" v-on:input="onchange_spread($event, index2, side, currency)" v-model.number="data['spreads'][currency][side][index2]" :placeholder="empty_placeholder" :multiplier="10000" :decimalplaces="0" class="border-0 col text-center input_spread bg-transparent w-100" />
+                                        </td>
+                                    </template>
+                                </tr>
+                            </tbody>
+                        </template>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            &nbsp;
+        </div>
+
+        <div class="row">
+            <div class="col table-responsive" id="div_table_options">
+                <div class="row">
+                    <div class="col">
+                        <div class="btn-group btn-group-sm btn-group-toggle">
+                            <label class="btn btn-secondary" :class="tableOption != 'GroupOption' ? 'active' : ''">
+                                <input type="radio" id="id_group_option" value="GroupOption" v-model="tableOption" checked />Economic Group
+                            </label>
+                            <label class="btn btn-secondary" :class="tableOption != 'CounterpartyOption' ? 'active' : ''">
+                                <input type="radio" id="id_counterparty_option" value="CounterpartyOption" v-model="tableOption" />Counterparty
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <template v-if="tableOption === 'GroupOption'">
+                    <div class="col">
+                        <div class="row table-responsive" style="max-height: 320px; overflow-y: auto">
+                            <table class="table table-bordered table-dark table-sm small mt-0 text-primary">
+                                <thead>
+                                    <tr class="header text-center table-th-25">
+                                        <template v-for="html_content in group_thead">
+                                            <th class="mt-0" style="position: sticky; top: 0;"><% html_content %></th>
+                                        </template>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    <tr class="text-center" v-for="transaction in group_transactions">
+                                        <td><% transaction.target %></td>
+                                        <td><% transaction.user %></td>
+                                        <td><% transaction.ts %></td>
+                                        <td><% transaction.ccy %></td>
+                                        <td><% transaction.spotday %></td>
+                                        <td><% transaction.side %></td>
+                                        <template v-if="transaction.spread">
+                                            <td><% transaction.spread %></td>
+                                        </template>
+
+                                        <template v-else>
+                                            <td>-</td>
+                                        </template>
+                                    </tr>
+
+                                    <tr class="text-center" v-if="Object.keys(group_transactions).length == 0">
+                                        <td colspan="7">No available group transaction</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+
+                <template v-if="tableOption === 'CounterpartyOption'">
+                    <div class="col">
+                        <div class="row table-responsive" style="max-height: 320px; overflow-y: auto">
+                            <table class="table table-bordered table-dark table-sm small mt-0 text-primary">
+                                <thead>
+                                    <tr class="header text-center table-th-25">
+                                        <template v-for="html_content in counterparty_thead">
+                                            <th class="mt-0" style="position: sticky; top: 0;"><% html_content %></th>
+                                        </template>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    <tr class="text-center" v-for="transaction in counterparty_transactions">
+                                        <td><% transaction.group %></td>
+                                        <td><% transaction.counterparty %></td>
+                                        <td><% transaction.target | formatCNPJ %></td>
+                                        <td><% transaction.user %></td>
+                                        <td><% transaction.ts %></td>
+                                        <td><% transaction.ccy %></td>
+                                        <td><% transaction.spotday %></td>
+                                        <td><% transaction.side %></td>
+                                        <template v-if="transaction.spread">
+                                            <td><% transaction.spread %></td>
+                                        </template>
+
+                                        <template v-else>
+                                            <td>-</td>
+                                        </template>
+                                    </tr>
+
+                                    <tr class="text-center" v-if="Object.keys(counterparty_transactions).length == 0">
+                                        <td colspan="9">No available counterparty transaction</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+{% endblock %}
+
+
+{% block trading_status %}
+    {% include 'status-trading-spot.html' %}
+{% endblock trading_status %}
+
+
+{% block script_eof %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#nav-items li').removeClass('active');
+            $('#nav-item-client_spreads').addClass('active');
+            toastr.options.timeOut = 0
+            toastr.options.extendedTimeOut = 0
+            toastr.options.closeButton = true
+        });
+    </script>
+{% endblock %}

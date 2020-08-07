@@ -1,0 +1,27 @@
+{
+	"TimeBuckets": [{
+			"InitialDay": 1,
+			"EndDay": 60
+		},
+		{
+			"InitialDay": 61,
+			"EndDay": 90
+		},
+		{
+			"InitialDay": 91,
+			"EndDay": 120
+		},
+		{
+			"InitialDay": 121,
+			"EndDay": 180
+		},
+		{
+			"InitialDay": 181,
+			"EndDay": 360
+		},
+		{
+			"InitialDay": 361,
+			"EndDay": 720
+		}
+	]
+}

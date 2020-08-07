@@ -1,0 +1,8 @@
+export ROBOTFXDIR=/opt/robotfx
+export ROBOTFX_DATADIR=${ROBOTFX_DATADIR:-/opt/robotfx/data}
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/qt487/lib
+export PYTHONPATH=${ROBOTFXDIR}/lib
+export ROBOTFX_PATH_RECEIPTS_OUTPUT=/tmp
+export RFX_FXGO_CONFIG=${ROBOTFXDIR}/etc/fxgo-config/config.txt
+export RFX_HISTORY_DIR=/var/tmp
+

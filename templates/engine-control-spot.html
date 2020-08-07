@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Engine Control SPOT 
+{% endblock %}
+
+{% block head %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            engine_parameters_vue_obj = new SimpleApplyConfig({
+                el: '#div_engine_parameters',
+                delimiters: ["<%","%>"],
+                data: {
+                    engine_parameters: {{ engine_parameters|safe }},
+                },
+                methods: {
+                    validated_positive_number: function(input) {
+                        if (typeof(input) == 'number' && input <= 0) {
+                            return false
+                        }
+
+                        return true
+                    },
+                    validated: function() {
+                        if (!this.validated_string_input(this.engine_parameters.EngineOnlineEndTime)) {
+                            alert('The value for the Engine trading OFF field is invalid')
+                            return false
+                        }
+
+                        if (!this.validated_time_hhmm_input(this.engine_parameters.EngineOnlineEndTime)) {
+                            alert('The value for the Engine trading OFF field is not a valid time (hh:mm)')
+                            return false
+                        }
+
+                        this.engine_parameters.EngineOnlineEndTime = this.fix_time_hhmm_input(this.engine_parameters.EngineOnlineEndTime)
+
+                        if (!this.validated_string_input(this.engine_parameters.RFQ_Timeout)) {
+                            alert('The value for the RFQ Timeout (secs) field is invalid')
+                            return false
+                        }
+
+                        if (!this.validated_positive_number(this.engine_parameters.RFQ_Timeout)) {
+                            alert('The value for the RFQ Timeout (secs) field should be strictly positive')
+                            return false
+                        }
+
+                        if (!this.validated_string_input(this.engine_parameters.MAM_USD)) {
+                            alert('The value for the Maximum allowable movement USDBRL (bps) field is invalid')
+                            return false
+                        }
+
+                        if (!this.validated_positive_number(this.engine_parameters.MAM_USD)) {
+                            alert('The value for the Maximum allowable movement USDBRL (bps) field should be strictly positive')
+                            return false
+                        }
+
+                        if (!this.validated_string_input(this.engine_parameters.MAM_EUR)) {
+                            alert('The value for the Maximum allowable movement EURBRL (bps) field is invalid')
+                            return false
+                        }
+
+                        if (!this.validated_positive_number(this.engine_parameters.MAM_EUR)) {
+                            alert('The value for the Maximum allowable movement EURBRL (bps) field should be strictly positive')
+                            return false
+                        }
+
+                        if (!this.validated_string_input(this.engine_parameters.MAM_JPY)) {
+                            alert('The value for the Maximum allowable movement JPYBRL (bps) field is invalid')
+                            return false
+                        }
+
+                        if (!this.validated_positive_number(this.engine_parameters.MAM_JPY)) {
+                            alert('The value for the Maximum allowable movement JPYBRL (bps) field should be strictly positive')
+                            return false
+                        }
+
+                        return true
+                    },
+                    submit: function(event) {
+                        if (!this.validated()) {
+                            return
+                        }
+
+                        let url = '/fxspot/engine-parameters-spot-put';
+                        let data = JSON.stringify({'engine_parameters': this.engine_parameters});
+                        let error_msg = 'ops...! An error has occurred on Engine Parameters SPOT PUT call!';
+                        submitData(url, data, error_msg);
+                    },
+                },
+            })
+
+            cutoff_times_vue_obj = new SimpleApplyConfig({
+                el: '#div_cutoff_times',
+                delimiters: ["<%","%>"],
+                data: {
+                    cutoff_times: {{ cutoff_times|safe }},
+                    spot_timeout: {{ spot_timeout|safe }},
+                },
+                methods: {
+                    submit: function(event) {
+                        let url = '/fxspot/cutoff-times-put'
+                        let data = JSON.stringify({'cutoff_times': this.cutoff_times, 'timeout': this.spot_timeout, })
+                        let error_msg = 'ops...! An error has occurred on Cutoff Times SPOT PUT call!'
+                        submitData(url, data, error_msg)
+                    },
+                    sortCutoffs() {
+                        var sortable = []
+                        for (var cutoff_value in this.cutoff_times.Primary) {
+                            let x = this.cutoff_times.Primary[cutoff_value]
+                            x.currency = cutoff_value
+                            sortable.push(x)
+                        }
+
+                        sortable.sort(function(ccy_a, ccy_b) {
+                            return ccy_a.ViewPriority - ccy_b.ViewPriority
+                        })
+
+                        return sortable
+                    },
+                },
+            })
+
+            $("#idApplyChanges").click(() => {
+                let vue_arr = [engine_parameters_vue_obj, cutoff_times_vue_obj]
+                for (var ind in vue_arr) {
+                    vue_arr[ind].save()
+                }
+            })
+        });
+    </script>
+
+    <style type="text/css">
+        .bg-green {
+            background: #ffc000;
+            color: white;
+        }
+
+        .bg-red {
+            background: #ffc000;
+            color: white;
+        }
+
+        .bg-danger {
+            color: #FFF;
+        }
+
+        .xsucess {
+            color: #FFF;
+        }
+
+        select {
+            background: transparent;
+            text-align-last:center;
+        }
+
+        select > option {
+            background-color: #FF9E2A;
+            color: black;
+        }
+
+        .input_spread:focus {
+            background: #E74C3C !important;
+        }
+    </style>
+{% endblock %}
+
+{% block halt %}
+    {% include 'halt-spot.html' %}
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        <div class="row mb-3 small">
+            <div id="div_engine_parameters" class="col-5">
+                <table class="table table-bordered table-sm mt-2">
+                    <tr class="text-center">
+                        <th class="table-th">Spot - Engine trading OFF</th>
+                        <td class="bg-orange">
+                            <input v-on:change="onchange_value" v-model="engine_parameters.EngineOnlineEndTime" class="border-0 col text-center input_spread" style="background: transparent;">
+                        </td>
+                    </tr>
+                    <tr class="text-center">
+                        <th class="table-th">Spot - RFQ Timeout (secs)</th>
+                        <td class="bg-orange">
+                            <input v-on:change="onchange_value" v-model.number="engine_parameters.RFQ_Timeout" class="border-0 col text-center input_spread" style="background: transparent;">
+                        </td>
+                    </tr>
+                    <tr class="text-center">
+                        <th class="table-th">Spot - Maximum allowable movement USDBRL (bps)</th>
+                        <td class="bg-orange align-middle">
+                            <input v-on:change="onchange_value" v-model.number="engine_parameters.MAM_USD" class="border-0 col text-center input_spread" style="background: transparent;">
+                        </td>
+                    </tr>
+                    <tr class="text-center">
+                        <th class="table-th">Spot - Maximum allowable movement EURBRL (bps)</th>
+                        <td class="bg-orange align-middle">
+                            <input v-on:change="onchange_value" v-model.number="engine_parameters.MAM_EUR" class="border-0 col text-center input_spread" style="background: transparent;">
+                        </td>
+                    </tr>
+                    <tr class="text-center">
+                        <th class="table-th">Spot - Maximum allowable movement JPYBRL (bps)</th>
+                        <td class="bg-orange align-middle">
+                            <input v-on:change="onchange_value" v-model.number="engine_parameters.MAM_JPY" class="border-0 col text-center input_spread" style="background: transparent;">
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="col-xs-2 mb-3 container-fluid" id="div_cutoff_times">
+                <div class="card h-100 d-block pl-4 mt-2 col-md-8">
+                    <p class="card-category mt-2">CutOff Time</p>
+                    <table class="table table-bordered table-sm mt-1 d-table">
+                        <thead>
+                            <tr class="header text-center d-table-row">
+                                <th class="w-25"></th>
+                                <th class="w-25"></th>
+                                <th colspan="3" class="text-nowrap w-50">Cut-off Time for RFQ (SÃO PAULO Time)</th>
+                            </tr>
+                            <tr class="header text-center d-table-row">
+                                <span class="w-25">
+                                    <th>Market</th>
+                                </span>
+                                <span class="w-25">
+                                    <th>Currency</th>
+                                </span>
+                                <span class="w-50">
+                                    <th>d+0</th>
+                                    <th>d+1</th>
+                                    <th>d+2</th>
+                                </span>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-orange">
+                            <tr class="text-center d-table-row" v-for="(object, ind) in sortCutoffs()">
+                                <th v-if="ind === 0" :rowspan="sortCutoffs().length" class="align-middle w-25">Primary</th>
+                                <th class="w-25"><% object.currency %></th>
+                                <span class="w-50">
+                                    <td>
+                                        <input v-on:change="onchange_value" v-model="object.d0" class="border-0 col-8 text-center input_spread bg-transparent" :disabled="object.d0.trim() === '-'">
+                                    </td>
+                                    <td>
+                                        <input v-on:change="onchange_value" v-model="object.d1" class="border-0 col text-center input_spread bg-transparent" :disabled="object.d1.trim() === '-'">
+                                    </td>
+                                    <td>
+                                        <input v-on:change="onchange_value" v-model="object.d2" class="border-0 col text-center input_spread bg-transparent" :disabled="object.d2.trim() === '-'">
+                                    </td>
+                                </span>
+                            </tr>
+                            <tr class="text-center d-table-row" v-for="(object, key) in cutoff_times.Secundary">
+                                <th class="align-middle">Secundary</th>
+                                <th><% key %></th>
+                                <td>
+                                    <input v-on:change="onchange_value" v-model="object.d0" class="border-0 col-8 text-center input_spread bg-transparent" :disabled="object.d1.trim() === '-'">
+                                </td>
+                                <td>
+                                    <input v-on:change="onchange_value" v-model="object.d1" class="border-0 col-8 text-center input_spread bg-transparent" :disabled="object.d1.trim() === '-'">
+                                </td>
+                                <td>
+                                    <input v-on:change="onchange_value" v-model="object.d2" class="border-0 col-8 text-center input_spread bg-transparent" :disabled="object.d1.trim() === '-'">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block trading_status %}
+    {% include 'status-trading-spot.html' %}
+{% endblock trading_status %}
+
+{% block script_eof %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#nav-items li').removeClass('active');
+            $('#nav-item-engine_control').addClass('active');
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,81 @@
+.bg-orange {
+    background: #FF9E2A !important;
+    color: #000 !important;
+}
+tbody.bg-orange > tr > td > a:link, tbody.bg-orange > tr > td > a:visited {
+    color: #000 !important;
+}
+tbody.bg-orange > tr > td > a:active, tbody.bg-orange > tr > td > a:hover {
+    color: #000 !important;
+    text-decoration: underline !important;
+}
+.table > thead > tr > th[class*="cell_buy"] {
+    color: #49ed6d;
+}
+.table > thead > tr > th.cell_sell {
+    color: red;
+}
+.table-margin {
+    margin-bottom: 0.5rem;
+  }
+.h6-margin {
+    margin-bottom: 1.5rem;
+}
+.th-buy {
+    color: #00bc8c !important;
+    font-weight: bold;
+}
+.th-sell {
+    color: #E74C3C !important;
+    font-weight: bold;
+}
+input[class*="input_spread"] {
+    width:auto !important;
+}
+input[class*="input_spread"]:focus {
+    background: #FFC000!important;
+}
+select[class*="input_spread"]:focus {
+    background: #FFC000!important;
+}
+input[type="text"][class*="typeahead form-control form-control-sm"],.p_input_class {
+    font-size: 0.64rem;
+}
+select[class*="default-select"] {
+    font-size: 0.64rem;
+    background-color: #FF9E2A;
+    width:auto !important;
+}
+select[class*="table-select"] {
+    font-size: 0.64rem;
+    background-color: #FF9E2A;
+    padding: 0px;
+    display: inline-block;
+    width: 100% !important;
+}
+.elemento_borrado {
+    opacity: 0.2!important;
+}
+.clickable-element {
+    cursor: pointer;
+}
+
+tr.header > th {
+    vertical-align: middle;
+}
+
+.text-last-center {
+    text-align-last: center;
+}
+
+.btn-border-qualified {
+    border-radius: 4px!important;
+}
+
+.td-cnpj-formatted {
+    white-space: nowrap;
+}
+
+.small-table-cell-formatted {
+    white-space: nowrap;
+}

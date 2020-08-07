@@ -1,0 +1,116 @@
+{% extends "base-popup.html" %}
+
+<!-- Begin page content -->
+{% block head %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            var app = new SimpleApplyConfig({
+                el: '#vue_main_div',
+                delimiters: ['[[', ']]'],
+                data: {
+                    group: {{ group | safe }},
+                    old_alias: null,
+                    members: {{ members | safe }},
+                    read_only: {{ read_only | safe }}
+                },
+                methods: {
+                    validate_data: function() {
+                        if (!this.group.Alias) {
+                            return false
+                        }
+
+                        if (!this.group.Name) {
+                            return false
+                        }
+
+                        return true
+                    },
+                    submit: function(event) {
+                        if (!this.validate_data()) {
+                            alert('Fill out the Alias and Name fields!')
+                            return
+                        }
+                        let url = '/fxconfig/group-put'
+                        let data = JSON.stringify({'group': this.group, 'members': this.members, 'alias': this.old_alias})
+                        let error_msg = 'ops...! An error has occurred on Group PUT call!'
+                        submitData(url, data, error_msg, this.reload)
+                    },
+                    reload: function() {
+                        window.opener.postMessage('reload', '*')
+                        open(location, '_self').close()
+                    }
+                },
+                beforeMount: function() {
+                    this.old_alias = this.group.Alias
+                }
+            })
+        })
+    </script>
+
+    <style>
+        table {
+            table-layout: fixed;
+            word-wrap: break-word;
+        }
+    </style>
+{% endblock %}
+
+{% block main %}
+    <div id="vue_main_div" class="container-fluid">
+        <div class="row m-0 mb-3 small">
+            <div class="text-white d-flex align-items-start flex-column">
+                <div class="col-md-8">
+                    <table class="table table-bordered table-hover table-sm small">
+                        <tr class="header text-center">
+                            <th class="w-25">Alias:</th>
+                            <td class="bg-orange w-75"><input type="text" v-on:input="onchange_value" v-model="group.Alias" class="p_input_class border-0 col text-center bg-transparent" v-bind:readonly="read_only" placeholder="Enter Alias">
+                            </td>
+                        </tr>
+                        <tr class="header text-center">
+                            <th class="w-75">Name:</th>
+                            <td class="bg-orange w-75"><input type="text" v-on:input="onchange_value" v-model="group.Name" class="p_input_class border-0 col text-center bg-transparent" placeholder="Enter Name">
+                            </td>
+                        </tr>
+                        <tr class="header text-center">
+                            <th class="w-25">Type:</th>
+                            <td class="bg-orange w-75">[[ group.Type ]]
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="card-group">
+                    <div class="card mr-2 h-100 d-inline-block pl-2 pr-2">
+                        <p class="card-category mt-1">Group Member</p>
+                        <table class="table table-bordered table-sm small mt-2 card-body bg-orange">
+                            <thead class="text-center">
+                                <tr>
+                                    <th>Member Alias</th>
+                                    <th>Name</th>
+                                    <th>CNPJ</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-center">
+                                <tr v-for="(data, alias) in members">
+                                    <td>[[ data.Alias ]]</td>
+                                    <td>[[ data.Name ]]</td>
+                                    <td>[[ data.Cnpj | formatCNPJ ]]</td>
+                                </tr>
+                                <tr v-if="Object.keys(members).length === 0">
+                                    <td colspan="3">No member is available!</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card-group mt-4">
+                        <button type="button" id="#" class="btn btn-sm small mt-4 bg-orange text-white float-right" v-on:click="submit">Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

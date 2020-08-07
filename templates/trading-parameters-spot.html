@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+{% block title %}Trading Parameters SPOT{% endblock %}
+
+{% block head %}
+    <script src="/static/number-input.js"></script>
+
+    <script type="text/javascript">
+        currency_formatter = Intl.NumberFormat('en-US',  {'minimumFractionDigits': 2, 'maximumFractionDigits': 2});
+
+        var processFloatNumber = function(num) {
+            return currency_formatter.format(num);
+        }
+
+        $(document).ready(function() {
+            cash_limits_logs_gen = function() {
+                text = `
+                    {% for ccy, maturity_values in cash_limits_logs.items() %}
+                    <li>{{ ccy }}</li>
+                    <ul>
+                        {% for maturity, values in maturity_values.items() %}
+                        <li>{{ maturity }}</li>
+                        <ul>
+                            {% for value in values %}
+                                {% if loop.first %}
+                                    {% if value is not none %}
+                                        <li>` + processFloatNumber({{ value }}) + `</li>
+                                    {% endif %}
+                                {% else %}
+                                    {% if value > 0 %}
+                                        <li>+ ` +  processFloatNumber({{ value }}) + `</li>
+                                    {% else %}
+                                        <li>- ` +  processFloatNumber({{ value }}) + `</li>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                        {% endfor %}
+                    </ul>
+                    {% endfor %}
+                `
+
+                return text;
+            }
+
+            $('#ul_logs').html(cash_limits_logs_gen())
+
+            currency_keys_vue_obj = new SimpleApplyConfig({
+                el: '#div_currency_keys',
+                delimiters: ["<%","%>"],
+                data: {
+                    currency_keys: {{ currency_keys|safe }},
+                    sorted_currencies: {{ sorted_currencies|safe }},
+                },
+                methods: {
+                    validated: function() {
+                        let i;
+                        for (i = 0; i < this.sorted_currencies.length; i++) {
+                            let ccy = this.sorted_currencies[i]
+
+                            if (!this.validated_string_input(this.currency_keys[ccy].FXSPOT.MaximumAmountAutoFlow)) {
+                                alert('The value for the Max (Any Settlement) field is invalid for the currency: ' + ccy)
+                                return false
+                            }
+
+                            if (!this.validated_string_input(this.currency_keys[ccy].FXSPOT.MaximumAmountAutoFlow_d0)) {
+                                alert('The value for the Max (D+0 only) field is invalid for the currency: ' + ccy)
+                                return false
+                            }
+
+                            if (!this.validated_string_input(this.currency_keys[ccy].FXSPOT.MaximumAmountAutoFlow_d1)) {
+                                alert('The value for the Max (D+1 only) field is invalid for the currency: ' + ccy)
+                                return false
+                            }
+
+                            if (!this.validated_string_input(this.currency_keys[ccy].FXSPOT.MinimumAmountAutoFlow)) {
+                                alert('The value for the Min (Any Settlement) field is invalid for the currency: ' + ccy)
+                                return false
+                            }
+                        }
+
+                        return true
+                    },
+                    submit: function(event) {
+                        if (!this.validated()) {
+                            return
+                        }
+
+                        let url = '/fxspot/currency-keys-spot-put'
+                        let data = JSON.stringify({'currency_keys': this.currency_keys, })
+                        let error_msg = 'ops...! An error has occurred on Currency Keys SPOT PUT call!'
+                        submitData(url, data, error_msg)
+                    },
+                },
+            });
+
+            pre_trading_ini_bal_vue_obj = new SimpleApplyConfig({
+                el: '#div_pre_trading_ini_bal',
+                delimiters: ["<%","%>"],
+                data: {
+                    pre_trading_ini_bal: {{ pre_trading_ini_bal|safe }},
+                    sorted_currencies: {{ sorted_currencies|safe }},
+                    initialized: {% if spot_initialized %}true{% else %}false{% endif %},
+                },
+                methods: {
+                    submit: function(event) {
+                        let url = '/fxspot/pre-trading-ini-bal-put';
+                        let data = JSON.stringify({'pre_trading_ini_bal': this.pre_trading_ini_bal, });
+                        let error_msg = 'ops...! An error has occurred on PreTrading Initial Balance SPOT PUT call!';
+                        submitData(url, data, error_msg);
+                        this.initialized = true
+                    }
+                }
+            });
+
+            update_balance_vue_obj = new Vue({
+                el: '#spot_balance_update',
+                delimiters: ["<%","%>"],
+                data: {
+                    sorted_currencies: {{ sorted_currencies|safe }},
+                    balance: {},
+                    update_render: 0, // kind of workaround to force re-render.
+                },
+                methods: {
+                    submit: function(event) {
+                        let url = '/fxspot/pre-trading-balance-update';
+                        let data = JSON.stringify({'balance_update': this.balance, });
+                        let error_msg = 'ops...! An error has occurred on PreTrading Update Balance!';
+                        submitData(url, data, error_msg, function(){ location.reload(); });
+
+                        for (var i in this.sorted_currencies) {
+                            for (var j in this.balance[this.sorted_currencies[i]]) {
+                                this.balance[this.sorted_currencies[i]][j] = null;
+                            }
+                        }
+
+                        this.update_render += 1
+                    }, 
+                    init: function() {
+                        this.balance = {}
+                        for (var i in this.sorted_currencies) {
+                            this.balance[this.sorted_currencies[i]] = {'d0': null, 'd1': null}
+                        }
+                    },
+                },
+                beforeMount() {
+                    this.init();
+                }
+            });
+
+
+            counterparty_vue_obj = new SimpleApplyConfig({
+                el: '#div_counterparty_data',
+                delimiters: ["<%","%>"],
+                data: {
+                    counterparty_data: {{ counterparty_data|safe }},
+                    allow_validate: {{ allow_validate|safe }},
+                    enab_dis_data: ['ENABLED', 'DISABLED'],
+                    no_yes_data: {{ validate_parameters|safe }}
+                },
+                methods: {
+                    submit: function(event) {
+                        let date = new Date()
+                        let month = String(date.getMonth() + 1)
+                        if (month.length == 1) {
+                            month = '0' + month
+                        }
+
+                        let day = String(date.getDate())
+                        if (day.length == 1) {
+                            day = '0' + day
+                        }
+
+                        today_str = date.getFullYear() + '-' + month + '-' + day
+
+                        for (let i = 0; i < this.counterparty_data.length; i++) {
+                            let cter_party = this.counterparty_data[i]
+
+                            let validate_kyc = cter_party.validate_kyc
+                            if (validate_kyc == 'NO: GOOD-TODAY') {
+                                cter_party.validate_kyc = 'NO: GOOD-TODAY|' + today_str
+                            }
+
+                            let validate_isda = cter_party.validate_isda
+                            if (validate_isda == 'NO: GOOD-TODAY') {
+                                cter_party.validate_isda = 'NO: GOOD-TODAY|' + today_str
+                            }
+                        }
+
+                        let my_reload_function = () => {
+                            for (let i = 0; i < this.counterparty_data.length; i++) {
+                                let cter_party = this.counterparty_data[i]
+
+                                let validate_kyc = cter_party.validate_kyc
+                                if (validate_kyc.startsWith('NO: GOOD-TODAY')) {
+                                    cter_party.validate_kyc = 'NO: GOOD-TODAY'
+                                }
+                            }
+                        }
+
+                        let url = '/fxspot/counterparty-spot-put';
+                        let data = JSON.stringify({'counterparty_data': this.counterparty_data, });
+                        let error_msg = 'ops...! An error has occurred on CounterParty SPOT PUT call!';
+                        submitData(url, data, error_msg, my_reload_function)
+                    },
+                }
+            });
+
+            $("#idApplyChanges").click(() => {
+                let vue_arr = [currency_keys_vue_obj, pre_trading_ini_bal_vue_obj, counterparty_vue_obj]
+                for (var ind in vue_arr) {
+                    vue_arr[ind].save()
+                }
+            })
+        });
+    </script>
+
+    <style type="text/css">
+        .nav-tabs .nav-link {
+            border: 1px solid #444 !important; /* forçando isso, mas deve ser corrigido para não precisar dessa linha */ 
+        }
+
+        .bg-danger {
+            color: #FFF;
+        }
+
+        .xsucess {
+            color: #FFF;
+        }
+
+        select {
+            background: transparent;
+            text-align-last:center;
+        }
+
+        select > option {
+            background-color: #FF9E2A;
+            color: black;
+        }
+
+        .input_spread:focus {
+            background: #E74C3C !important;
+        }
+
+        .input_spread:read-only {
+            color: #444 !important;
+        }
+
+        .txtstrongsuccess {
+            color: #00bc8c !important;
+        }
+    </style>
+{% endblock %}
+
+{% block halt %}
+    {% include 'halt-spot.html' %}
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="table-responsive col-md-12">
+                <div class="col-6 mb-3 small" id="div_pre_trading_ini_bal">
+                    <div class="row flex-row flex-nowrap align-self-start">
+                        <table class="table table-bordered table-sm mt-2 mb-0" align="right">
+                            <thead>
+                                <tr class="header text-center">
+                                    <th></th>
+                                    <th colspan="2">Initial Daily Balance</th>
+                                </tr>
+                                <tr class="header text-center">
+                                    <th style="width: 0.2rem;">Currency</th>
+                                    <th style="width: 0.2rem;">d+0</th>
+                                    <th style="width: 0.2rem;">d+1</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="text-center" v-for="(ccy, idx) in sorted_currencies">
+                                    <th><% ccy %></th>
+                                    <td class="bg-orange">
+                                        <number_input v-on:input="onchange_value" v-model.number="pre_trading_ini_bal[ccy].d0" :decimalplaces="2" class="input_spread border-0 col text-center bg-transparent w-100" :disabled="initialized"/>
+                                    </td>
+                                    <td class="bg-orange">
+                                        <number_input v-on:input="onchange_value" v-model.number="pre_trading_ini_bal[ccy].d1" :decimalplaces="2" class="input_spread border-0 col text-center bg-transparent w-100" :disabled="initialized">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <template v-if="initialized">
+                        <div class="row flex-row-reverse">
+                            <a href="#" onclick="" data-toggle="modal" data-target="#spot_balance_update">Update Balance</a>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="table-responsive col-md-12">
+                <div class="col-xs-12 container-fluid" id="div_currency_keys">
+                    <div class="row flex-row flex-nowrap">
+                        <table class="table table-bordered table-sm mt-2" style="font-size: 12px;">
+                            <thead>
+                                <tr class="header text-center">
+                                    <th></th>
+                                    <th style="width: fit-content;" colspan="4">Auto Flow Limits</th>
+                                </tr>
+                                <tr class="header text-center">
+                                    <th>Currency</th>
+                                    <th>Max (Any Settlement)</th>
+                                    <th>Max (d+0 Only)</th>
+                                    <th>Max (d+1 Only)</th>
+                                    <th>Min (Any Settlement)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="text-center" v-for="(ccy, idx) in sorted_currencies">
+                                    <th style="width: 9.5rem;"><% ccy %></th>
+                                    <td class="bg-orange" style="width: fit-content">
+                                        <number_input v-on:input="onchange_value" v-model.number="currency_keys[ccy].FXSPOT.MaximumAmountAutoFlow" :decimalplaces="2" class="input_spread border-0 col text-center bg-transparent w-100">
+                                    </td>
+                                    <td class="bg-orange" style="width: fit-content">
+                                        <number_input v-on:input="onchange_value" v-model.number="currency_keys[ccy].FXSPOT.MaximumAmountAutoFlow_d0" :decimalplaces="2" class="input_spread border-0 col text-center bg-transparent w-100">
+
+                                    </td>
+                                    <td class="bg-orange" style="width: fit-content">
+                                       <number_input v-on:input="onchange_value" v-model.number="currency_keys[ccy].FXSPOT.MaximumAmountAutoFlow_d1" :decimalplaces="2" class="input_spread border-0 col text-center bg-transparent w-100">
+                                    </td>
+                                    <td class="bg-orange" style="width: fit-content">
+                                        <number_input v-on:input="onchange_value" v-model.number="currency_keys[ccy].FXSPOT.MinimumAmountAutoFlow" :decimalplaces="2" class="input_spread border-0 col text-center bg-transparent w-100">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col" id="div_counterparty_data">
+                <table id="param_auto_trading_by_cp_table" class="table table-bordered table-sm small mt-2 text-primary">
+                    <thead>
+                        <tr class="header text-center table-th-25">
+                            <th colspan="4">Parameterization of Automatic Trading by Counterparty</th>
+                        </tr>
+                        <tr class="header text-center table-th-25">
+                            <th style="min-width: 50%" >Counterparty</th>
+                            <th style="min-width: 20%" >CNPJ</th>
+                            <th style="min-width: 15%" >Automatic Flow</th>
+                            <th style="min-width: 15%" >Validate KYC</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="text-center" v-for="cter_party in counterparty_data">
+                            <td><% cter_party.counterparty %></td>
+                            <td><% cter_party.cter_prty_id | formatCNPJ %></td>
+                            <td>
+                                <select v-bind:class="cter_party.automatic_flow === 'ENABLED' ? 'txtstrongsuccess' : 'txtdanger'" v-on:change="onchange_value" v-model="cter_party.automatic_flow" class="border-0 col text-center font-weight-bold">
+                                    <option v-for="val in enab_dis_data" :value="val" :selected="cter_party.automatic_flow == val">
+                                        <% val %>
+                                    </option>
+                                </select>
+                            </td>
+                            <td>
+                                <select v-if="allow_validate === true" v-bind:class="cter_party.validate_kyc === 'YES' ? 'txtstrongsuccess' : 'txtdanger'" v-on:change="onchange_value" v-model="cter_party.validate_kyc" class="border-0 col text-center font-weight-bold">
+                                    <option v-for="val in no_yes_data" :value="val" :selected="cter_party.validate_kyc == val">
+                                        <% val %>
+                                    </option>
+                                </select>
+                                <select v-else class="border-0 col text-center font-weight-bold txtstrongsuccess" :disabled="true">
+                                    <option v-for="val in no_yes_data" v-if="cter_party.validate_kyc == val">
+                                        <% val %>
+                                    </option>
+                                </select>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal fade" id="spot_balance_update" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                    <h5 class="modal-title">Balance Update</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    </div>
+                    <div class="modal-body">
+                        <ul class="nav nav-tabs" id="myTab" role="tablist">
+                            <li class="nav-item">
+                              <a class="nav-link active" id="balance-tab" data-toggle="tab" href="#balance" role="tab" aria-controls="status" aria-selected="true">&plusmn; Balance</a>
+                            </li>
+                            <li class="nav-item">
+                              <a class="nav-link" id="status-tab" data-toggle="tab" href="#status" role="tab" aria-controls="status" aria-selected="false">Updates</a>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="myTabContent">
+                            <div class="col-12 tab-pane container mb-3 active" id="balance" role="tabpanel" aria-labelledby="balance-tab">
+                                <div class="p-1 mt-1">
+                                    Insert how much CCY balance should be increased or decreased.
+                                </div>
+                                <table class="table table-bordered table-sm mt-2 mb-0 small" align="right">
+                                    <thead>
+                                        <tr class="header text-center">
+                                            <th></th>
+                                            <th colspan="2">Update Daily Balance</th>
+                                        </tr>
+                                        <tr class="header text-center">
+                                            <th style="width: 0.2rem;">Currency</th>
+                                            <th style="width: 0.2rem;">d+0</th>
+                                            <th style="width: 0.2rem;">d+1</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="text-center" v-for="(ccy, idx) in sorted_currencies">
+                                            <th><% ccy %></th>
+                                            <td class="bg-orange">
+                                                <number_input v-model.number="balance[ccy].d0" :key="update_render" :decimalplaces="2" class="input_spread border-0 col text-center bg-transparent w-100">
+                                            </td>
+                                            <td class="bg-orange">
+                                                <number_input v-model.number="balance[ccy].d1" :key="update_render" :decimalplaces="2" class="input_spread border-0 col text-center bg-transparent w-100">
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="tab-pane fade" id="status" role="tabpanel" aria-labelledby="status-tab">
+                                <div style="max-height:500px;overflow:auto">
+                                    <ul id='ul_logs'>
+
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <a href="">
+                            <button type="button" class="btn btn-primary btn-sm" data-dismiss="modal" v-on:click="submit()">Update</button>
+                        </a>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+{% endblock %}
+
+{% block trading_status %}
+    {% include 'status-trading-spot.html' %}
+{% endblock trading_status %}
+
+{% block script_eof %}
+    <link rel="stylesheet" type="text/css" href="/static/DataTables/datatables.min.css"/>
+    <script type="text/javascript" src="/static/DataTables/datatables.min.js"></script>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#nav-items li').removeClass('active');
+            $('#nav-item-trading_parameters').addClass('active');
+
+            $('#param_auto_trading_by_cp_table').DataTable({
+                "paging":         false,
+                "order":          [[ 0, 'asc']],
+                "ordering":       true,
+                "info":           false,
+                "searching":      true,
+                "fixedHeader":    true,
+                "scrollCollapse": true,
+                "scrollY":        "32vh",
+                "columnDefs": [
+                    {"orderable": false, "targets": [1, 2, 3]},
+                ],
+            });
+
+        });
+    </script>
+{% endblock %}

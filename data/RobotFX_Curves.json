@@ -1,0 +1,38 @@
+{
+	"PRE": {
+		"Currency": "BRL",
+		"Type": "Spot",
+		"DayCount": "BIZ",
+		"Base": "252",
+		"Compounding": "Y",
+		"Interpolation": "EXP",
+		"Family": "766"
+	},
+	"USD_Onshore": {
+		"Currency": "USD",
+		"Type": "Spot",
+		"DayCount": "ACT",
+		"Base": 360,
+		"Compounding": "Y",
+		"Interpolation": "EXP",
+		"Family": "761"
+	},
+	"EUR_Onshore": {
+		"Currency": "EUR",
+		"Type": "Spot",
+		"DayCount": "ACT",
+		"Base": 360,
+		"Compounding": "Y",
+		"Interpolation": "EXP",
+		"Family": "762"
+	},
+	"JPY_Onshore": {
+		"Currency": "JPY",
+		"Type": "Spot",
+		"DayCount": "ACT",
+		"Base": 360,
+		"Compounding": "Y",
+		"Interpolation": "EXP",
+		"Family": "763"
+	}
+}

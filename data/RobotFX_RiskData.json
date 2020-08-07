@@ -1,0 +1,24 @@
+{
+	"CURVE": {
+		"PRE": {
+			"ViewPriority": "1",
+			"RiskLabels": ["1M", "2M", "3M", "6M", "1Y", "2Y", "3Y"],
+			"RiskVertices": [21, 42, 63, 126, 252, 504, 756]
+		},
+		"USD_Onshore": {
+			"ViewPriority": "2",
+			"RiskLabels": ["1M", "2M", "3M", "6M", "1Y", "2Y", "3Y"],
+			"RiskVertices": [30, 60, 90, 180, 360, 720, 1080]
+		},
+		"EUR_Onshore": {
+			"ViewPriority": "3",
+			"RiskLabels": ["1M", "2M", "3M", "6M", "1Y", "2Y", "3Y"],
+			"RiskVertices": [30, 60, 90, 180, 360, 720, 1080]
+		},
+		"JPY_Onshore": {
+			"ViewPriority": "4",
+			"RiskLabels": ["1M", "2M", "3M", "6M", "1Y", "2Y", "3Y"],
+			"RiskVertices": [30, 60, 90, 180, 360, 720, 1080]
+		}
+	}
+}

@@ -1,0 +1,14 @@
+{% extends "market-data.html" %}
+
+{% block title %} 
+    Market Data SPOT 
+{% endblock title %}
+
+{% block halt %}
+    {% include 'halt-spot.html' %}
+{% endblock halt %}
+
+
+{% block trading_status %}
+    {% include 'status-trading-spot.html' %}
+{% endblock trading_status %}

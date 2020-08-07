@@ -1,0 +1,94 @@
+{
+    "12345678100010": {
+        "Alias": "PETRO",
+        "CounterpartyName": "Petroleo Bras SA",
+        "FXMarketType": 1,
+        "DefaultFXTransaction": "IMPORT_EXPORT",
+        "Products": ["FXSPOT"]
+    },
+    "12345678100020": {
+        "Alias": "EMBRA",
+        "CounterpartyName": "Embraer SA",
+        "Group": "EMBRA",
+        "FXMarketType": 1,
+        "DefaultFXTransaction": "IMPORT_EXPORT",
+        "Products": ["FXSPOT", "FXNDF"]
+    },
+    "12345678100030": {
+        "Alias": "BANBRA",
+        "CounterpartyName": "Banco do Brasil SA",
+        "FXMarketType": 2,
+        "DefaultFXTransaction": "INTERBANK_CLEARING",
+        "Products": ["FXSPOT"]
+    },
+    "12345671000101": {
+        "Alias": "PETRDIST",
+        "CounterpartyName": "Petrobras Distrib",
+        "FXMarketType": 1,
+        "DefaultFXTransaction": "IMPORT_EXPORT",
+        "Products": ["FXSPOT", "FXNDF"]
+    },
+    "12345671000102": {
+        "Alias": "TRANSPETR",
+        "CounterpartyName": "Transpetro",
+        "FXMarketType": 1,
+        "DefaultFXTransaction": "FINANCIAL",
+        "Products": ["FXSPOT"]
+    },
+    "12345671000103": {
+        "Alias": "GASPETR",
+        "CounterpartyName": "Gaspetro",
+        "FXMarketType": 1,
+        "DefaultFXTransaction": "IMPORT_EXPORT",
+        "Products": ["FXSPOT", "FXNDF"]
+    },
+    "12345671000104": {
+        "Alias": "LIQUIPETR",
+        "CounterpartyName": "Liquigas Distrib SA",
+        "FXMarketType": 1,
+        "DefaultFXTransaction": "IMPORT_EXPORT",
+        "Products": ["FXSPOT"]
+    },
+    "12345671000105": {
+        "Alias": "PETRBIO",
+        "CounterpartyName": "Petrobras Biocombustivel",
+        "FXMarketType": 1,
+        "DefaultFXTransaction": "IMPORT_EXPORT",
+        "Products": ["FXNDF"]
+    },
+    "12345671000201": {
+        "Alias": "EMBRDEFESA",
+        "CounterpartyName": "Embraer Defesa SA",
+        "FXMarketType": 1,
+        "DefaultFXTransaction": "IMPORT_EXPORT",
+        "Products": ["FXNDF"]
+    },
+    "12345671000202": {
+        "Alias": "SAVIS",
+        "CounterpartyName": "Savis Tecnologia e Sistemas S.A",
+        "FXMarketType": 1,
+        "DefaultFXTransaction": "IMPORT_EXPORT",
+        "Products": ["FXSPOT", "FXNDF"]
+    },
+    "12345671000301": {
+        "Alias": "BRASSEG",
+        "CounterpartyName": "Bras Seguros S.A.",
+        "FXMarketType": 2,
+        "DefaultFXTransaction": "INTERBANK_NO_CLEARING",
+        "Products": ["FXNDF"]
+    },
+    "12345671000302": {
+        "Alias": "BRASPREV",
+        "CounterpartyName": "BrasilPrev S.A",
+        "FXMarketType": 2,
+        "DefaultFXTransaction": "INTERBANK_CLEARING",
+        "Products": ["FXNDF"]
+    },
+    "12345671000400": {
+        "Alias": "LATAM",
+        "CounterpartyName": "Latam S.A",
+        "FXMarketType": 1,
+        "DefaultFXTransaction": "FINANCIAL",
+        "Products": ["FXNDF"]
+    }
+}

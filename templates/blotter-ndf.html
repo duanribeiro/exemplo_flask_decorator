@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+
+{% block title %}Blotter NDF{% endblock %}
+
+<!-- Begin page content -->
+{% block head %}
+    <script type="text/javascript" src="/static/robotmarketdata.js"></script>
+
+    <script type="text/javascript">
+        var error_msgs_toastr_array = []
+
+        currency_formatter = Intl.NumberFormat('en-US',  {'minimumFractionDigits': 2, 'maximumFractionDigits': 2});
+
+        var processFloatNumber = function(num) {
+            return currency_formatter.format(num);
+        }
+
+        Vue.filter('currency', function (value) {
+            return currency_formatter.format(value);
+        });
+
+        var dropComma = function(x) {
+            while (x.indexOf(',') != -1) {
+                x = x.replace(',', '');
+            }
+            return x;
+        }
+
+        var processCurrency = function(data) {
+            let tk = Object.keys(data)
+            for (const k of tk) {
+                data[k + '_raw'] = data[k]
+                data[k] = processFloatNumber(data[k])
+            }
+            return data
+        }
+
+        var calc_total_buy = function(c, data) {
+            let result = 0
+            for (const idx in data) {
+                if (data[idx]['Currency'] == c) {
+                    result = data[idx]['BuyD0_raw']
+                    result += data[idx]['BuyD1_raw']
+                    result += data[idx]['BuyD2_raw']
+                    result = processFloatNumber(result)
+                }
+            }
+
+            return result
+        }
+
+        var calc_total_sell = function(c, data) {
+            let result = 0
+            for (const idx in data) {
+                if (data[idx]['Currency'] == c) {
+                    result = data[idx]['SellD0_raw']
+                    result += data[idx]['SellD1_raw']
+                    result += data[idx]['SellD2_raw']
+                    result = processFloatNumber(result)
+                }
+            }
+
+            return result
+        }
+
+        var open_popup = function(deal_id) {
+            var myWindow = window.open('/fxndf/blotter-ndf-dealid-popup?dealid=' + deal_id, "", "width=800,height=640");
+        }
+
+        Vue.prototype.$eventHub = new Vue();
+
+        $(document).ready(function() {
+            toastr.options.timeOut = 0
+            toastr.options.extendedTimeOut = 0
+            toastr.options.closeButton = true
+            init_market_data_panel('/fxsupplier/supplier_data/NDF');
+
+            app_blotter = new Vue({
+                el: '#table_blotter',
+                delimiters: ['[[', ']]'],
+                data: {
+                    initialized: false,
+                    trades: [],
+                    filter_array: '',
+                },
+                methods: {
+                    handleCallback: function(event) {
+                        let data = JSON.parse(event.data);
+                        this.displayData(data);
+                    },
+                    init: function() {
+                        $.ajax({
+                            url: '/fxndf/transactions',
+                            dataType: 'json',
+                            type: 'get',
+                            contentType: 'application/json',
+                            data: '',
+                            processData: false,
+                            success: (data, textStatus, jQxhr) => {
+                                this.trades = []
+                                data.sort((a, b) => (a.timestamp > b.timestamp) ? 1 : -1);
+                                for (d in data){
+                                    this.displayData(data[d])
+                                }
+                                this.initialized = true;
+                                this.update_filter(this.filter_array);
+                            },
+                            error: (jqXhr, textStatus, errorThrown) => {
+                                console.log('Init Table Blotter error'+errorThrown)
+                            }
+                        });
+                    },
+                    displayData: function(data) {
+                        if (data.content_empty == 1) {
+                            return;
+                        }
+
+                        if (data.security_type != "FXNDF") {
+                            return;
+                        };
+
+                        let tradeLen = this.trades.length;
+                        let index;
+                        for (index = 0; index < tradeLen; index++) {
+                            if (this.trades[index].quote_req_id == data.quote_req_id) {
+                                break;
+                            }
+                        }
+
+                        data.amount = processFloatNumber(data.amount);
+                        data.amountbrl = processFloatNumber(data.amountbrl);
+
+                        if (data.mtype === 'REJECTED' && this.initialized) {
+                            showQuoteReqRejected(data.quote_req_id, data.rejected_text)
+                        }
+
+                        if (index < tradeLen) {
+                            this.trades[index] = data;
+                        } else {
+                            this.trades.splice(0, 0, data);
+                        }
+                        
+                        this.update_filter(this.filter_array);
+                    },
+                    startPage: function() {
+                        this.setupEventSource();
+                        this.$eventHub.$on('filter-bus', this.update_filter);
+                    },
+                    setupEventSource: function() {
+                        this.initialized = false;
+                        this.init();
+                        source = new EventSource("/fxndf/stream");
+                        source.addEventListener('message', this.handleCallback, false);
+                        source.onerror = function(e) {
+                            console.log('Retry SSE connection...');
+                            source.close();
+                            setTimeout(() => { app_blotter.setupEventSource() }, 2000);
+                        };
+                    },
+                    open_a_popup: function(deal_id) {
+                        open_popup(deal_id)
+                    },
+                    update_filter(filter) {
+                        this.filter_array = filter;
+                        this.$forceUpdate();
+                        Vue.nextTick(function () {
+                            try { table.columns.adjust(); } catch (e) { }
+                            if ($('#tbody_blotter').children().length - $('#tbody_blotter').children().filter(':empty').length == 1) {
+                                $(".dataTables_empty").show();
+                            } else {
+                                $(".dataTables_empty").hide();
+                            }
+                        });
+                    },
+                    check_filter: function (mtype) {
+                        if (this.filter_array == '') {
+                            return true;
+                        }
+                        for (var index in this.filter_array) {
+                            if (mtype == this.filter_array[index]) {
+                                return true
+                            }
+                        }
+                        return false;
+                    },
+                },
+                mounted(){
+                    this.startPage();
+                },
+            });
+
+            var showQuoteReqRejected = function(quote_id, cause) {
+                let aLen = error_msgs_toastr_array.length
+                for (i = 0; i < aLen; i++) {
+                    if (error_msgs_toastr_array[i] ==  quote_id) {
+                        return
+                    }
+                }
+
+                error_msgs_toastr_array.push(quote_id)
+
+                toastr.error("Quote Request rejected: <button type='button' class='btn clear btn-toastr' onclick='open_popup(\"" + quote_id + "\")'>" + quote_id + "</button><br />Reason: " + cause)
+                console.log('Quote request by cause: ' + String(cause))
+            }
+
+            var app_tape = new Vue({
+                el: "#id-options-tape",
+                delimiters: ['[[', ']]'],
+                data: {
+                },
+                mounted() {
+                    this.observer = new MutationObserver(mutations => {
+                        for (const m of mutations) {
+                            const newValue = m.target.getAttribute(m.attributeName)
+                            this.$nextTick(() => {
+                                this.onClassChange(newValue, m.oldValue, m.target)
+                            });
+                        }
+                    });
+
+                    for(opt in this.$refs) {
+                        this.observer.observe(this.$refs[opt], {
+                            attributes: true,
+                            attributeOldValue : true,
+                            attributeFilter: ['class'],
+                        })
+                    }
+
+                    $("label.btn.btn-secondary.active").css('border-color', $("label.btn.btn-secondary.active").css('color'));
+                },
+                beforeDestroy() {
+                    this.observer.disconnect()
+                },
+                methods: {
+                    onClassChange(classAttrValue, oldValue, elem) {
+                        const classList = classAttrValue.split(' ')
+                        if (classList.includes('active')) {
+                            console.log($(elem));
+                            console.log($(elem));
+                            $(elem).css('border-color', $(elem).css('color'));
+                        } else {
+                            $(elem).css('border-color', '#444');
+                        }
+                    },
+                    bus_filter(filter) {
+                        this.$eventHub.$emit('filter-bus', filter.split('|'));
+                    },
+                },
+            });
+
+            app_amounties = new Vue({
+                el: '#table_amounties',
+                delimiters: ['[[', ']]'],
+                data: {
+                    amounties: [],
+                    sorted_currencies: {{ sorted_currencies|safe }},
+                },
+                methods: {
+                    pooling: function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxndf/balance_ndf', _data => {
+                                let data = JSON.parse(_data);
+                                this.displayData(data);
+                            }).fail(function() {
+                                // TODO: Fail treatment
+                                setTimeout(() => { app_amounties.pooling() }, 3000)
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling() }, waitTime)
+                            })
+                    },
+                    displayData: function(data) {
+                        let tk = this.sorted_currencies
+                        this.amounties = [];
+                        for (const k of tk) {
+                            let td = data[k]
+                            td = processCurrency(td)
+                            td.Currency = k
+                            this.amounties.push(td)
+                        }
+
+                        this.$forceUpdate();
+                    },
+                    startPage: function() {
+                        this.source.addEventListener('message', this.handleCallback, false)
+                    },
+                    total_buy: function(c) {
+                        return calc_total_buy(c, this.amounties)
+                    },
+                    total_sell: function(c) {
+                        return calc_total_sell(c, this.amounties)
+                    },
+                },
+                computed: {
+                    total_revenue_currency: function() {
+                        let result = 0
+                        let amount_values = Object.values(this.amounties)
+                        for (const amount in amount_values) {
+                            result += amount_values[amount].Revenue_BRL_raw
+                        }
+
+                        // Source (adapted!): https://stackoverflow.com/a/48180201
+                        return processFloatNumber(result)
+                    }
+                },
+                beforeMount(){
+                    this.pooling();
+                },
+            });
+        });
+    </script>
+
+    <style type="text/css">
+        td a {
+            color: #FF9E2A !important;
+        }
+    </style>
+{% endblock %}
+
+{% block halt %}
+    {% include 'halt-ndf.html' %}
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        {% include 'panel-market-data-quotes.html' %}
+
+        <div id="id-options-tape" class="row">
+            <div class="col">
+                <div class="btn-group btn-group-sm btn-group-toggle" data-toggle="buttons">
+                    <label v-on:click="bus_filter('DEAL')" class="btn btn-secondary text-success" ref="deals">
+                        <input type="radio" name="options" id="option1" autocomplete="off" checked> Deals
+                    </label>
+                    <label v-on:click="bus_filter('REJECTED')" class="btn btn-secondary text-danger" ref="rejected">
+                        <input type="radio" name="options" id="option2" autocomplete="off"> Rejected
+                    </label>
+                    <label v-on:click="bus_filter('NOTH.DONE|TIMEOUT|EXP.QUOTE|ACK.UNKNOWN')" class="btn btn-secondary text-warning" ref="lost">
+                        <input type="radio" name="options" id="option3" autocomplete="off"> Lost
+                    </label>
+                    <label v-on:click="bus_filter('')" class="btn btn-secondary active" ref="all">
+                        <input type="radio" name="options" id="option3" autocomplete="off"> All
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-2">
+            <div class="col table-responsive">
+            <table id="table_blotter" class="table table-bordered table-hover table-sm small">
+                <thead>
+                    <tr class="header text-center">
+                        <th>Status</th>
+                        <th>Deal ID</th>
+                        <th>DealCode</th>
+                        <th>Counterparty</th>
+                        <th>CNPJ</th>
+                        <th>Amount</th>
+                        <th>CCY</th>
+                        <th>DC</th>
+                        <th>Maturity</th>
+                        <th>FWD-Buy</th>
+                        <th>FWD-Sell</th>
+                        <th>Spot</th>
+                        <th>Spread (bps)</th>
+                        <th>Revenue (BRL)</th>
+                    </tr>
+                </thead>
+
+                <tbody id="tbody_blotter" class="text-center text-primary">
+                    <tr v-for="x in trades">
+                        <template v-if="check_filter(x.mtype)">
+                            <td v-bind:style="{ color: [[ x.color ]] }">[[ x.mtype ]]</td>
+                            <td v-bind:style="">
+                                <a href="#" v-on:click="open_a_popup(x.quote_req_id)" v-bind:style="">[[ x.quote_req_id ]]</a>
+                            </td>
+                            <td v-bind:style="">[[ x.dealcode ]]</td>
+                            <td v-bind:style="">[[ x.counterparty ]]</td>
+                            <td class="td-cnpj-formatted">[[ x.cnpj | formatCNPJ ]]</td>
+                            <td v-bind:style="">[[ x.amount ]]</td>
+                            <td v-bind:style="">[[ x.currency ]]</td>
+                            <td v-bind:style="" v-if="x.dc">[[ x.dc ]]</td>
+                            <td v-else>-</td>
+                            <td v-bind:style="">[[ x.maturity ]]</td>
+                            <td v-bind:style="" v-if="x.buy">[[ x.buy ]]</td>
+                            <td v-else>-</td>
+                            <td v-bind:style="" v-if="x.sell">[[ x.sell ]]</td>
+                            <td v-else>-</td>
+                            <td v-if="x.s_cost">[[ x.s_cost ]]</td>
+                            <td v-else>-</td>
+                            <td v-if="x.spread">[[ (x.spread * 10000)|numberformat ]]</td>
+                            <td v-else>-</td>
+                            <td v-bind:style="" v-if="x.revenue">[[ x.revenue|currency ]]</td>
+                            <td v-else>-</td>
+                        </template>
+                    </tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+
+        <div class="row">
+            &nbsp;
+        </div>
+
+        <div class="row">
+            <div class="col-7">
+                <table id="table_amounties" class="table table-bordered table-sm small">
+                    <template v-if="amounties!=[]">
+                        <thead>
+                            <tr class="header text-center table-th-25">
+                                <th></th>
+                                <th>Total PV</th>
+                                <th>Total PV (BRL)</th>
+                                <th>Revenue (BRL)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="text-center" v-for="amount in amounties">
+                                <th class="table-th">[[ amount.Currency ]]</th>
+                                <td>[[ amount.NetPV ]]</td>
+                                <td>[[ amount.NetPV_BRL ]]</td>
+                                <td>[[ amount.Revenue_BRL ]]</td>
+                            </tr>
+                            <tr class="text-center">
+                                <th class="table-th">Total (BRL)</th>
+                                <td>-</td>
+                                <td>-</td>
+                                <td class="font-weight-bold">[[ total_revenue_currency ]]</td>
+                            </tr>
+                        </tbody>
+                    </template>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block trading_status %}
+    {% include 'status-trading-ndf.html' %}
+{% endblock trading_status %}
+
+{% block script_eof %}
+<link rel="stylesheet" type="text/css" href="/static/DataTables/datatables.min.css"/>
+<script type="text/javascript" src="/static/DataTables/datatables.min.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#nav-items li').removeClass('active');
+        $('#nav-item-main_blotter').addClass('active');
+
+        table = $('#table_blotter').DataTable({
+            "paging":         false,
+            "ordering":       false,
+            "info":           false,
+            "searching":      false,
+            "fixedHeader":    true,
+            "scrollCollapse": true,
+            "scrollY":        "40vh",
+        });
+        
+        setTimeout(function(){
+            table.columns.adjust(); 
+        }, 800);
+    });
+</script>
+{% endblock %}

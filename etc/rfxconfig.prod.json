@@ -1,0 +1,8 @@
+{
+    "GLIM_mock": false,
+    "SFDC_mock": false,
+    "BDS_mock": false,
+    "BPIPE_mock": false,
+    "start_online": false,
+    "suppressed_logging": true
+}

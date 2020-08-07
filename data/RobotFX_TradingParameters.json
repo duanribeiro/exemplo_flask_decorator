@@ -1,0 +1,234 @@
+{
+    "CounterpartyKeys": {
+        "12345671000101": {
+            "FXNDF": {
+                "AutoFlow": "DISABLED",
+                "ValidateISDA": "YES",
+                "ValidateKYC": "YES",
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "AutoFlow": "ENABLED",
+                "ValidateKYC": "YES"
+            }
+        },
+        "12345671000102": {
+            "FXNDF": {
+                "AutoFlow": "ENABLED",
+                "ValidateISDA": "YES",
+                "ValidateKYC": "YES",
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "AutoFlow": "ENABLED",
+                "ValidateKYC": "YES"
+            }
+        },
+        "12345671000103": {
+            "FXNDF": {
+                "AutoFlow": "ENABLED",
+                "ValidateISDA": "YES",
+                "ValidateKYC": "YES",
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "AutoFlow": "ENABLED",
+                "ValidateKYC": "YES"
+            }
+        },
+        "12345671000104": {
+            "FXNDF": {
+                "AutoFlow": "ENABLED",
+                "ValidateISDA": "YES",
+                "ValidateKYC": "YES",
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "AutoFlow": "DISABLED",
+                "ValidateKYC": "YES"
+            }
+        },
+        "12345671000105": {
+            "FXNDF": {
+                "AutoFlow": "ENABLED",
+                "ValidateISDA": "YES",
+                "ValidateKYC": "YES",
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "AutoFlow": "ENABLED",
+                "ValidateKYC": "NO: GOOD-TILL-CANCELLED"
+            }
+        },
+        "12345671000201": {
+            "FXNDF": {
+                "AutoFlow": "ENABLED",
+                "ValidateISDA": "YES",
+                "ValidateKYC": "YES",
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "AutoFlow": "ENABLED",
+                "ValidateKYC": "YES"
+            }
+        },
+        "12345671000202": {
+            "FXNDF": {
+                "AutoFlow": "ENABLED",
+                "ValidateISDA": "YES",
+                "ValidateKYC": "YES",
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "AutoFlow": "ENABLED",
+                "ValidateKYC": "YES"
+            }
+        },
+        "12345671000301": {
+            "FXNDF": {
+                "AutoFlow": "ENABLED",
+                "ValidateISDA": "YES",
+                "ValidateKYC": "YES",
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "AutoFlow": "ENABLED",
+                "ValidateKYC": "YES"
+            }
+        },
+        "12345671000302": {
+            "FXNDF": {
+                "AutoFlow": "ENABLED",
+                "ValidateISDA": "YES",
+                "ValidateKYC": "YES",
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "AutoFlow": "ENABLED",
+                "ValidateKYC": "YES"
+            }
+        },
+        "12345671000400": {
+            "FXNDF": {
+                "AutoFlow": "ENABLED",
+                "ValidateISDA": "YES",
+                "ValidateKYC": "YES",
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "AutoFlow": "DISABLED",
+                "ValidateKYC": "YES"
+            }
+        },
+        "12345678100010": {
+            "FXSPOT": {
+                "ValidateKYC": "YES",
+                "AutoFlow": "ENABLED"
+            },
+            "FXNDF": {
+                "UpperLimitDays2Maturity": 720,
+                "AutoFlow": "ENABLED",
+                "ValidateKYC": "YES",
+                "ValidateISDA": "YES"
+            }
+        },
+        "12345678100020": {
+            "FXSPOT": {
+                "ValidateKYC": "YES",
+                "AutoFlow": "ENABLED"
+            },
+            "FXNDF": {
+                "UpperLimitDays2Maturity": 720,
+                "AutoFlow": "ENABLED",
+                "ValidateKYC": "YES",
+                "ValidateISDA": "YES"
+            }
+        },
+        "12345678100030": {
+            "FXSPOT": {
+                "ValidateKYC": "YES",
+                "AutoFlow": "ENABLED"
+            },
+            "FXNDF": {
+                "UpperLimitDays2Maturity": 720,
+                "AutoFlow": "ENABLED",
+                "ValidateKYC": "YES",
+                "ValidateISDA": "YES"
+            }
+        }
+    },
+    "CurrencyKeys": {
+        "EUR": {
+            "FXNDF": {
+                "LowerLimitRevenue": 100,
+                "MaximumAmountAutoFlow": 100000000,
+                "MinimumAmountAutoFlow": 0,
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "MaximumAmountAutoFlow": 2000000,
+                "MaximumAmountAutoFlow_d0": 2000000,
+                "MaximumAmountAutoFlow_d1": 2000000,
+                "MinimumAmountAutoFlow": 10
+            }
+        },
+        "JPY": {
+            "FXNDF": {
+                "LowerLimitRevenue": 100,
+                "MaximumAmountAutoFlow": 100000000,
+                "MinimumAmountAutoFlow": 0,
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "MaximumAmountAutoFlow": 2000000,
+                "MaximumAmountAutoFlow_d0": 2000000,
+                "MaximumAmountAutoFlow_d1": 2000000,
+                "MinimumAmountAutoFlow": 10
+            }
+        },
+        "USD": {
+            "FXNDF": {
+                "LowerLimitRevenue": 100,
+                "MaximumAmountAutoFlow": 100000000,
+                "MinimumAmountAutoFlow": 0,
+                "UpperLimitDays2Maturity": 720
+            },
+            "FXSPOT": {
+                "MaximumAmountAutoFlow": 2000000,
+                "MaximumAmountAutoFlow_d0": 2000000,
+                "MaximumAmountAutoFlow_d1": 2000000,
+                "MinimumAmountAutoFlow": 10
+            }
+        }
+    },
+    "Engine_Global_Parameters": {
+        "FXNDF": {
+            "EngineOnlineEndTime": "22:00",
+            "MAM_EUR": 5,
+            "MAM_JPY": 5,
+            "MAM_USD": 5,
+            "RFQ_Timeout": 180
+        },
+        "FXSPOT": {
+            "EngineOnlineEndTime": "22:00",
+            "MAM_EUR": 5,
+            "MAM_JPY": 5,
+            "MAM_USD": 5,
+            "RFQ_Timeout": 180
+        }
+    },
+    "PreTradingInitialBalance": {
+        "EUR": {
+            "d0": 100000000,
+            "d1": 100000000
+        },
+        "JPY": {
+            "d0": 100000000,
+            "d1": 100000000
+        },
+        "USD": {
+            "d0": 100000000,
+            "d1": 100000000
+        }
+    }
+}

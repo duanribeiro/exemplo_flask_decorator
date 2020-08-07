@@ -1,0 +1,28 @@
+{
+    "BRL": {
+        "Buy": "-",
+        "Sell": "-",
+        "SettlementRate": 0.0615
+    },
+    "EUR": {
+        "MarkupBUY": 0.0001,
+        "MarkupSELL": 0.0002,
+        "MaxQuantity": 10000000,
+        "SettlementRate": 0.0308,
+        "SettlementRateCurveConvention": "EUR_Onshore"
+    },
+    "JPY": {
+        "MarkupBUY": 0.0001,
+        "MarkupSELL": 0.0002,
+        "MaxQuantity": 10000000,
+        "SettlementRate": 0.0308,
+        "SettlementRateCurveConvention": "JPY_Onshore"
+    },
+    "USD": {
+        "MarkupBUY": 0.0001,
+        "MarkupSELL": 0.0002,
+        "MaxQuantity": 10000000,
+        "SettlementRate": 0.0308,
+        "SettlementRateCurveConvention": "USD_Onshore"
+    }
+}

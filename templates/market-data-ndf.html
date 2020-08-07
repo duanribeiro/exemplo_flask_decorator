@@ -1,0 +1,13 @@
+{% extends "market-data.html" %}
+
+{% block title %}
+    Market Data NDF
+{% endblock %}
+
+{% block halt %}
+    {% include 'halt-ndf.html' %}
+{% endblock halt %}
+
+{% block trading_status %}
+    {% include 'status-trading-ndf.html' %}
+{% endblock trading_status %}

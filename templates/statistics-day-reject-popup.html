@@ -1,0 +1,66 @@
+{% extends "base-popup.html" %}
+
+{% block title %}
+    <title>Reject Info {{ fx_product }} {{ transact_date }}</title>
+{% endblock title %}
+
+{% block head %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            var app = new Vue({
+                el: '#vue_main_div',
+                delimiters: ["[[", "]]"],
+                data: {
+                    day_reject_info: JSON.parse({{ day_reject_info_json | tojson }}),
+                },
+            });
+        });
+    </script>
+{% endblock head %}
+
+{% block main %}
+    <div id="vue_main_div" class="container-fluid">
+        <div class="m-0 mb-3" style="width: 100%">
+            <table id="reject_table" class="table table-bordered table-hover table-sm small" style="width: 100%">
+                <thead>
+                    <tr class="header text-center table-th-25">
+                        <th colspan="5">RFQs rejected at {{ transact_date }}</th>
+                    </tr>
+                    <tr class="header text-center table-th-25">
+                        <th>Transaction Time</th>
+                        <th>Deal Code</th>
+                        <th>Counterparty</th>
+                        <th>CNPJ</th>
+                        <th>Rejection Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="transaction in day_reject_info">
+                        <td class="text-center">[[ transaction.transact_time ]]</td>
+                        <td class="text-center">[[ transaction.customer_deal_code ]]</td>
+                        <td class="text-center">[[ transaction.customer_str ]]</td>
+                        <td class="text-center">[[ transaction.customer_id | formatCNPJ ]]</td>
+                        <td>[[ transaction.reject_reason ]]</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock main %}
+
+{% block script_eof %}
+<link rel="stylesheet" type="text/css" href="/static/DataTables/datatables.min.css"/>
+    <script type="text/javascript" src="/static/DataTables/datatables.min.js"></script>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            table = $('#reject_table').DataTable({
+                "paging":         false,
+                "ordering":       false,
+                "info":           false,
+                "searching":      false,
+            });
+        });
+
+    </script>
+{% endblock script_eof %}

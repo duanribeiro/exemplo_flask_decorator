@@ -1,0 +1,668 @@
+{% extends "base.html" %}
+{% block title %}Spreads NDF{% endblock %}
+
+{% block head %}
+    <script src="/static/typeahead.bundle.min.js"></script>
+    <script src="/static/entity_search_typehead.js"></script>
+    <script type="text/javascript" src="/static/robotmarketdata.js"></script>
+
+    <script src="/static/number-input.js"></script>
+
+    <link rel="stylesheet" href="/static/fontawesome/css/all.css" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="/static/typehead.css">
+
+    <script type="text/javascript">
+        var app_spreads;
+        legal_entities = {{ legal_entities|safe }};
+        var modified_bucket = false
+        var app_spreads_first_render_data; // backups first data for each render loading's event...!
+
+        groups = legal_entities.Groups;
+        counterparties = legal_entities.Counterparties;
+        searching_for_group = true;
+
+        set_typehead = function() {
+            search_group_or_counterparty =
+                new SearchGroupOrCounterparty(
+                    '#search_group_or_counterparty',
+                    searching_for_group,
+                    searching_for_group ? groups : counterparties)
+
+            search_group_or_counterparty.init()
+
+            $('#search_group_or_counterparty').bind('typeahead:selected', function(obj, datum, name) {
+                identification = ''
+                key = search_group_or_counterparty.search_map[datum]
+
+                if (searching_for_group) {
+                    var e = groups[key]
+                    identification = e['NameHolding']
+                }
+                else {
+                    var e = counterparties[key]
+                    let cnpj = key
+                    let formatted_cnpj = cnpj.substr(0, 2) + '.' + cnpj.substr(2, 3) + '.' + cnpj.substr(5, 3) + '/' + cnpj.substr(8, 4) + '-' + cnpj.substr(12)
+                    identification = e['CounterpartyName'] + ' - ' + formatted_cnpj
+                }
+
+                $('#entity_identification').html(identification)
+                $('#entity_identification').show()
+                $('#entity_identification').css({border: '1px solid', borderRadius: '2px', maxWidth: 'fit-content', fontWeight: 'bold'})
+
+                type = searching_for_group ? 'group' : 'counterparty'
+                url = '/fxndf/spreads-ndf-get?search_by=' + type + '&key=' + key
+
+                $.ajax({
+                    url: url,
+                    dataType: 'json',
+                    type: 'get',
+                    contentType: 'application/json',
+                    processData: false,
+                    success: function(data, textStatus, jQxhr) {
+                        app_spreads.render_loading(data)
+                    },
+                    error: function(jqXhr, textStatus, errorThrown) {
+                        alert('ops...')
+                    }
+                })
+            })
+        }
+
+        var showing_err_msg = false
+
+        var show_generic_spread_message;
+
+        $(document).ready(function() {
+            $("#search_group_or_counterparty").val("")
+            set_typehead()
+
+            show_generic_spread_message = (msg) => {
+                if (showing_err_msg) {
+                    return
+                }
+
+                showing_err_msg = true
+                let err = toastr.error(msg)
+                setTimeout(() => {
+                    showing_err_msg = false
+                    $(err).hide()
+                }, 1000)
+            }
+
+            let show_wrong_spread_message = function() {
+                show_generic_spread_message("Only strictly positive values allowed!")
+            }
+
+            newbucket_ok = function() {
+                upper_limit = parseInt($('#input_new_bucket').val());
+                buckets = app_spreads.$data.data['spreads_catalog']['Buckets']
+
+                if (Number.isNaN(upper_limit)) {
+                    if (!($('#input_new_bucket').val().length)) {
+                        show_generic_spread_message("Input must be numeric")
+                    }
+                } else if (buckets.indexOf(upper_limit) == -1) {
+                    let index = buckets.findIndex(function(element) { return element > upper_limit; })
+
+                    if (index < 0)
+                        index = buckets.length;
+
+                    for (var i in app_spreads.$data.data['spreads_catalog']['Spreads']) {
+                        var value = null;
+
+                        if (index == buckets.length)
+                            value = app_spreads.$data.data['spreads_catalog']['Spreads'][i]['BUYSELL'][index-1];
+                        else
+                            value = app_spreads.$data.data['spreads_catalog']['Spreads'][i]['BUYSELL'][index];
+
+                        app_spreads.$data.data['spreads_catalog']['Spreads'][i]['BUYSELL'].splice(index, 0, value);
+                    }
+
+                    buckets.splice(index, 0, upper_limit)
+
+                    modified_bucket = true
+
+                    app_spreads.$data.data.status['newbucket'] = true
+                    app_spreads.refresh_bucket_dict()
+                    app_spreads.refresh_currencies()
+                    app_spreads.onchange_value(null)
+                } else {
+                    show_generic_spread_message("Time Bucket already exists")
+                }
+
+                newbucket_cancel()
+            }
+
+            newbucket_cancel = function() {
+                $('#input_new_bucket').val('')
+                $('#btn_bucket-new').popover('hide');
+            }
+
+            bucket_delete = function(index) {
+                try {
+                    app_spreads.$data.data['spreads_catalog']['Buckets'].splice(index, 1);
+
+                    for (var i in app_spreads.$data.data['spreads_catalog']['Spreads']) {
+                        app_spreads.$data.data['spreads_catalog']['Spreads'][i]['BUYSELL'].splice(index, 1);
+                    }
+                    modified_bucket = true
+
+                    app_spreads.$data.data.status = {'deletedbucket': true}
+                    app_spreads.refresh_bucket_dict()
+                    app_spreads.refresh_currencies()
+                    app_spreads.onchange_value(null)
+                } catch (e) {
+                    console.log('Opa! deu erro!')
+                    console.log(e)
+                }
+            }
+
+            app_group_counterparty = new Vue({
+                el: '#div_group_counterparty',
+                data: {
+                    option: 'GroupOption'
+                }
+            })
+
+            app_spreads = new SimpleApplyConfig({
+                el: '#div_table_spreads',
+                delimiters: ["<%","%>"],
+                data: {
+                    data: {},
+                    last_spread_event: -2,
+                },
+                computed: {
+                    empty_ndf_placeholder: function() {
+                        return '-'
+                    }
+                },
+                methods: {
+                    submit: function(event) {
+                        search_group = $('#SearchGroup').is(':checked');
+                        let entity_type = search_group ? 'group' : 'counterparty';
+                        let url = '/fxndf/spreads-ndf-put?type=' + entity_type + '&key=' + key;
+                        let data = JSON.stringify({'spreads_catalog': this.data['spreads_catalog'],
+                                                   'status': this.data.status});
+                        error_msg = 'ops...!'
+                        submitData(url, data, error_msg, reload=doNothing, dev=true)
+                        this.refresh_currencies()
+                        this.data.status = {}
+                    },
+                    refresh_currencies: function() {
+                        this.data.the_currencies = {}
+                        for (idx in this.data.currencies) {
+                            let cur = this.data.currencies[idx]
+                            this.data.the_currencies[cur] = this.data.spreads_catalog.Spreads[cur].BUYSELL.slice()
+                        }
+                    },
+                    refresh_bucket_dict: function() {
+                        this.data.bucket_dict = {}
+                        if ('spreads_catalog' in this.data && 'Buckets' in this.data['spreads_catalog']) {
+                            let x = this.data['spreads_catalog']['Buckets'];
+                            for (let i = 0; i < x.length; i++) {
+                                this.data.bucket_dict[x[i]] = i
+                            }
+                        }
+                    },
+                    get_bucket_index: function(bucket) {
+                        if (this.data.bucket_dict && bucket in this.data.bucket_dict) {
+                            return this.data.bucket_dict[bucket]
+                        }
+
+                        return -1
+                    },
+                    get_string_buckets: function(bucket) {
+                        let idx = this.get_bucket_index(bucket)
+
+                        if (idx == 0) {
+                            return '1 - ' + bucket
+                        } else if (idx == -1) {
+                            return '-'
+                        }
+
+                        let val = this.data['spreads_catalog']['Buckets'][idx - 1] + 1
+                        return val + ' - ' + bucket
+                    },
+                    render_loading: function(data) {
+                        app_spreads_first_render_data = JSON.parse(JSON.stringify(data))
+                        this.$nextTick(() => {
+                            this.data = {}
+                            this.$nextTick(() => {
+                                this.data = data
+                                this.data.status = data.status || {}
+                                this.refresh_currencies()
+                                this.refresh_bucket_dict()
+                            })
+                        })
+                    },
+                    modified_spread: function() {
+                        for (cur in this.data.the_currencies) {
+                            let arr1 = this.data.the_currencies[cur]
+                            let arr2 = this.data.spreads_catalog["Spreads"][cur].BUYSELL
+
+                            if (arr1.length != arr2.length) {
+                                return true
+                            }
+
+                            for (idx in arr1) {
+                                if (!Object.is(arr1[idx], arr2[idx])) {
+                                    return true
+                                }
+                            }
+                        }
+
+                        return false
+                    },
+                    fill_status_data: function(currency, bucket, spread) {
+                        this.data.status['currency'] = currency
+                        this.data.status['bucket'] = this.get_string_buckets(bucket)
+                        this.data.status['spread'] = spread
+                    },
+                    onchange_spread: function(event, bucket, currency) {
+                        if (modified_bucket || !this.modified_spread()) {
+                            modified_bucket = false
+                            return
+                        }
+
+                        let spread = Object.is(event, null) ? '-' : event;
+
+                        if (event <= 0) {
+                            let idx = this.get_bucket_index(bucket)
+                            let no_mod_fact = false
+                            if (this.data.spreads_catalog.Spreads[currency].BUYSELL[idx] == 0 && event == 0) {
+                                spread = '-'
+                            }
+                            if (Object.is(event, null) && Object.is(this.data.spreads_catalog.Spreads[currency].BUYSELL[idx], null)) {
+                                no_mod_fact = true
+                            }
+                            this.data.spreads_catalog.Spreads[currency].BUYSELL[idx] = null
+                            if (spread != '-') {
+                                this.disableSimpleApplyConfig()
+                                if (event != this.last_spread_event) {
+                                    this.last_spread_event = event
+                                }
+
+                                show_wrong_spread_message()
+                            } else {
+                                if (event == 0) {
+                                    if (Number(this.data.spreads_catalog.Spreads[currency].BUYSELL[idx]) == 0) {
+                                        this.enableSimpleApplyConfig()
+                                        this.onchange_value(spread)
+                                    }
+                                } else {
+                                    this.enableSimpleApplyConfig()
+                                }
+
+                                if (!no_mod_fact) {
+                                    this.fill_status_data(currency, bucket, spread)
+                                }
+                            }
+
+                            return
+                        } else {
+                            this.enableSimpleApplyConfig()
+                        }
+
+                        this.onchange_value(event)
+
+                        this.fill_status_data(currency, bucket, spread)
+                    },
+                },
+                updated: function() {
+                    this.data.spreads_catalog && this.data.spreads_catalog.Buckets && this.data.spreads_catalog.Buckets.forEach(function(value, index) {
+                        $('#btn-bucket-' + index).popover({
+                            trigger: "focus",
+                            placement : 'top',
+                            content: '<div><a href="#" onmousedown="bucket_delete(' + index + ')">Delete</a></div>',
+                            html: true,
+                            sanitize: false
+                        });
+                    });
+
+                    $('#btn_bucket-new').popover({
+                        trigger: "click",
+                        placement : 'top',
+                        content: '<div><input type="number" id="input_new_bucket" class="form-control form-control-sm mb-2 mr-sm-2" placeholder="New Bucket (Upper Limit)"><button class="btn btn-sm btn-primary mb-2 mr-sm-2" onclick="newbucket_ok()">OK</i></button><button class="btn btn-primary btn-sm mb-2 mr-sm-2" onclick="newbucket_cancel()">Cancel</button></div>',
+                        html: true,
+                        sanitize: false
+                    });
+
+                    $('#btn_bucket-new').on('shown.bs.popover', function () {
+                        $('#input_new_bucket').focus()
+
+                        $('#input_new_bucket').on('keypress', function(e) {
+                            if (e.which == 13) {
+                                e.preventDefault()
+                                $(this).popover('hide')
+                                newbucket_ok()
+                            } else if (e.which == 46 || e.which == 44 || e.which == 45) {
+                                $(this).popover('hide')
+                                e.preventDefault()
+
+                                if (e.which == 45 && !($('#input_new_bucket').val())) {
+                                    show_generic_spread_message("Input must be greater than zero")
+                                } else {
+                                    show_generic_spread_message("input must be integer number")
+                                }
+                            } else if (e.which == 48 && !($('#input_new_bucket').val())) {
+                                $(this).popover('hide')
+                                e.preventDefault()
+                                show_generic_spread_message("Input must be greater than zero")
+                            }
+                        })
+                    })
+                }
+            })
+
+            $('input[type=radio][name=SearchGroup]').change(function(){
+                $("#search_group_or_counterparty").val("")
+                $("#entity_identification").html("")
+                $("#entity_identification").hide()
+                searching_for_group = $('#SearchGroup').is(':checked')
+                set_typehead()
+                app_spreads.data = { }
+                app_spreads.reset()
+                app_spreads.disableSimpleApplyConfig()
+            })
+
+            app_dyn_table = new Vue({
+                el: '#div_table_options',
+                delimiters: ["<%","%>"],
+                data: {
+                    tableOption: 'GroupOption',
+                    group_initialized: false,
+                    group_transactions: [],
+                    group_thead: ['Group Name', 'Last Modified by', 'Date Last Modification',
+                                  'Last Modification: CCY', 'Last Modification: TimeBucket',
+                                  'Last Spread Inputed'],
+                    group_data: {},
+                    counterparty_initialized: false,
+                    counterparty_transactions: [],
+                    counterparty_thead: ['Group Name', 'Counterparty', 'CNPJ', 'Last Modified by',
+                                         'Date Last Modification', 'Last Modification: CCY',
+                                         'Last Modification: TimeBucket', 'Last Spread Inputed'],
+                    counterparty_data: {}
+                },
+                methods: {
+                    pooling_counterparty: async function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxndf/spreads_ndf_counterparty_transactions', _data => {
+                                let data = JSON.parse(_data);
+                                this.displayCounterpartyData(data)
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling_counterparty() }, waitTime)
+                            }).fail(() => {
+                                alert('Failed to load counterparty table!')
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling_counterparty() }, waitTime)
+                            })
+                    },
+                    pooling_group: async function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxndf/spreads_ndf_group_transactions', _data => {
+                                let data = JSON.parse(_data);
+                                this.displayGroupData(data)
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling_group() }, waitTime)
+                            }).fail(() => {
+                                alert('Failed to load group table!')
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling_group() }, waitTime)
+                            })
+                    },
+                    displayGroupData: function(data) {
+                        if (!data.length) {
+                            return
+                        }
+
+                        this.group_transactions = data
+                    },
+                    displayCounterpartyData: function(data) {
+                        if (!data.length) {
+                            return
+                        }
+
+                        this.counterparty_transactions = data
+                    },
+                    open_a_popup: function(deal_id) {
+                        open_popup(deal_id)
+                    }
+                },
+                beforeMount(){
+                    this.pooling_counterparty();
+                    this.pooling_group();
+                },
+            });
+
+            $("#idApplyChanges").click(() => {
+                let vue_arr = [app_spreads]
+
+                for (var ind in vue_arr) {
+                    vue_arr[ind].save()
+                }
+            })
+
+            init_market_data_panel('/fxsupplier/supplier_data/NDF');
+        });
+
+    </script>
+
+    <style type="text/css">
+        .changed {
+            background: #F00;
+        }
+
+        a {
+            color: ;
+        }
+
+        .bucket-options {
+            cursor: pointer;
+            background: transparent;
+            border: 0px;
+            color: #FFF;
+            font-weight: bold;
+        }
+
+        input:focus {
+            background: #FFC000 !important;
+        }
+
+        @-moz-document url-prefix() {
+            #entity_identification {
+                width: max-content !important;
+                display: table !important;
+                margin-top: 0 !important;
+                margin-right: auto !important;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block halt %}
+    {% include 'halt-ndf.html' %}
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        {% include 'panel-market-data-quotes.html' %}
+
+        <div class="row mt-2 p-2">
+            <div class="col">
+                <form class="form-inline small">
+                    <label for="staticEmail" class="col-sm-2 col-form-label text-left">Search:</label>
+                    <div id="bloodhound" class="col-2">
+                        <input type="text" class="typeahead form-control form-control-sm bg-orange input_spread" style="font-size: 0.64rem;" id="search_group_or_counterparty" value="">
+                    </div>
+                    <div id="div_group_counterparty" class="col-sm-6">
+                        <div class="custom-control custom-radio custom-control-inline custom-control-sm">
+                            <input type="radio" id="SearchGroup" name="SearchGroup" class="custom-control-input" :checked="option == 'GroupOption'" value="GroupOption" @change="radio = $event.target.value">
+                            <label class="custom-control-label" for="SearchGroup">Group</label>
+                        </div>
+                        <div class="custom-control custom-radio custom-control-inline">
+                            <input type="radio" id="SearchCounterparty" name="SearchGroup" class="custom-control-input" :checked="option == 'CounterpartyOption'" value="CounterpartyOption" @change="radio = $event.target.value">
+                            <label class="custom-control-label" for="SearchCounterparty">Counterparty</label>
+                        </div>
+                    </div>
+                </form>
+
+                <form class="form-inline small">
+                    <label for="staticEmail" class="col-sm-2 col-form-label text-left">Name:</label>
+                    <div class="col-sm-10" style="margin-left: 1.3em;" id="entity_identification"></div>
+                </form>
+
+                <div id="div_table_spreads" class="table-responsive overflow-auto mw-100">
+                    <template v-if="data.spreads_catalog">
+                        <table class="table table-bordered table-sm small mt-2" v-if="data.spreads_catalog.Buckets">
+                            <thead>
+                                <tr class="header text-center table-th-25">
+                                    <th></th>
+                                    <th class="w-100" :colspan="data.spreads_catalog.Buckets.length">Time Bucket (Days)
+                                        <span class="float-right"><button id="btn_bucket-new" class="fas fa-plus" style="color:#fff;background: transparent;border:0px"></button></span>
+                                    </th>
+                                </tr>
+                                <tr class="header text-center table-th-25">
+                                    <th class="text-nowrap">Currency (pips)</th>
+                                    <th class="bg-orange text-nowrap" v-for="(bucket, index1) in data.spreads_catalog.Buckets">
+                                        <button :id="'btn-bucket-' + index1" class="bucket-options">
+                                            <template v-if="index1 == 0">1 - </template>
+                                            <template v-else><% parseInt(data.spreads_catalog.Buckets[index1-1]) + 1 %> - </template>
+                                            <% bucket %>
+                                        </button>
+                                        <input :id="'input-set_bucket-' + index1" v-model.number="data.spreads_catalog.Buckets[index1]" v-on:input="onchange_spread" class="form-control form-control-sm d-none" style="font-size: 0.64rem" />
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="text-center" v-for="(currency, index2) in data.currencies">
+                                    <th class="text-nowrap"><% currency %></th>
+                                    <template v-for="(bucket, index1) in data.spreads_catalog.Buckets">
+                                        <td class="bg-orange"><number_input v-on:input="onchange_spread($event, bucket, currency)" v-model.number="data.spreads_catalog.Spreads[currency]['BUYSELL'][index1]" :placeholder="empty_ndf_placeholder" :multiplier="10000" :decimalplaces="0" class="border-0 col text-center bg-transparent">
+                                        </td>
+                                    </template>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            &nbsp;
+        </div>
+
+        <div class="row">
+            <div class="col table-responsive" id="div_table_options">
+                <div class="row">
+                    <div class="col">
+                        <div class="btn-group btn-group-sm btn-group-toggle">
+                            <label class="btn btn-secondary" :class="tableOption != 'GroupOption' ? 'active' : ''">
+                                <input type="radio" id="id_group_option" value="GroupOption" v-model="tableOption" checked />Economic Group
+                            </label>
+                            <label class="btn btn-secondary" :class="tableOption != 'CounterpartyOption' ? 'active' : ''">
+                                <input type="radio" id="id_counterparty_option" value="CounterpartyOption" v-model="tableOption" />Counterparty
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <template v-if="tableOption === 'GroupOption'">
+                    <div class="col">
+                        <div class="row table-responsive" style="max-height: 320px; overflow-y: auto">
+                            <table class="table table-bordered table-dark table-sm small mt-0 text-primary">
+                                <thead>
+                                    <tr class="header text-center table-th-25">
+                                        <template v-for="html_content in group_thead">
+                                            <th class="mt-0" style="position: sticky; top: 0;"><% html_content %></th>
+                                        </template>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    <tr class="text-center" v-for="transaction in group_transactions">
+                                        <td><% transaction.target %></td>
+                                        <td><% transaction.user %></td>
+                                        <td><% transaction.ts %></td>
+                                        <td><% transaction.ccy %></td>
+                                        <td><% transaction.bucket %></td>
+                                        <template v-if="transaction.spread">
+                                            <td><% transaction.spread %></td>
+                                        </template>
+
+                                        <template v-else>
+                                            <td>-</td>
+                                        </template>
+                                    </tr>
+
+                                    <tr class="text-center" v-if="Object.keys(group_transactions).length == 0">
+                                        <td colspan="6">No available group transaction</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+
+                <template v-if="tableOption === 'CounterpartyOption'">
+                    <div class="col">
+                        <div class="row table-responsive" style="max-height: 320px; overflow-y: auto">
+                            <table class="table table-bordered table-dark table-sm small mt-0 text-primary">
+                                <thead>
+                                    <tr class="header text-center table-th-25">
+                                        <template v-for="html_content in counterparty_thead">
+                                            <th class="mt-0" style="position: sticky; top: 0;"><% html_content %></th>
+                                        </template>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    <tr class="text-center" v-for="transaction in counterparty_transactions">
+                                        <td><% transaction.group %></td>
+                                        <td><% transaction.counterparty %></td>
+                                        <td><% transaction.target | formatCNPJ %></td>
+                                        <td><% transaction.user %></td>
+                                        <td><% transaction.ts %></td>
+                                        <td><% transaction.ccy %></td>
+                                        <td><% transaction.bucket %></td>
+                                        <template v-if="transaction.spread">
+                                            <td><% transaction.spread %></td>
+                                        </template>
+
+                                        <template v-else>
+                                            <td>-</td>
+                                        </template>
+                                    </tr>
+
+                                    <tr class="text-center" v-if="Object.keys(counterparty_transactions).length == 0">
+                                        <td colspan="8">No available counterparty transaction</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+{% endblock %}
+
+{% block trading_status %}
+    {% include 'status-trading-ndf.html' %}
+{% endblock trading_status %}
+
+{% block script_eof %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#nav-items li').removeClass('active');
+            $('#nav-item-client_spreads').addClass('active');
+        });
+    </script>
+{% endblock %}

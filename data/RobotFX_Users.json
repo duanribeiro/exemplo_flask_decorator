@@ -1,0 +1,44 @@
+{
+	"ndf": {
+		"password": "pbkdf2:sha256:150000$dQpnOiUW$a8b8fc1a094acb1dec88ec0b199cd175d2b530b88e0d88fe8446121dfd3519c7",
+		"name": "ndf",
+		"email": "contato@octaplus.com.br",
+		"role": "e-sales ndf",
+		"allow_validate": "Yes"
+	},
+	"spot": {
+		"password": "pbkdf2:sha256:150000$dQpnOiUW$a8b8fc1a094acb1dec88ec0b199cd175d2b530b88e0d88fe8446121dfd3519c7",
+		"name": "spot",
+		"email": "contato@octaplus.com.br",
+		"role": "e-sales spot",
+		"allow_validate": "Yes"
+	},
+	"fxsupplier": {
+		"password": "pbkdf2:sha256:150000$dQpnOiUW$a8b8fc1a094acb1dec88ec0b199cd175d2b530b88e0d88fe8446121dfd3519c7",
+		"name": "supplier",
+		"email": "contato@octaplus.com.br",
+		"role": "fx-supplier",
+		"allow_validate": "N/A"
+	},
+	"supervisor": {
+		"password": "pbkdf2:sha256:150000$dQpnOiUW$a8b8fc1a094acb1dec88ec0b199cd175d2b530b88e0d88fe8446121dfd3519c7",
+		"name": "supervisor",
+		"email": "contato@octaplus.com.br",
+		"role": "supervisor",
+		"allow_validate": "N/A"
+	},
+	"ti": {
+		"password": "pbkdf2:sha256:150000$dQpnOiUW$a8b8fc1a094acb1dec88ec0b199cd175d2b530b88e0d88fe8446121dfd3519c7",
+		"name": "ti",
+		"email": "contato@octaplus.com.br",
+		"role": "ti",
+		"allow_validate": "N/A"
+    },
+    "si": {
+		"password": "pbkdf2:sha256:150000$dQpnOiUW$a8b8fc1a094acb1dec88ec0b199cd175d2b530b88e0d88fe8446121dfd3519c7",
+		"name": "si",
+		"email": "contato@octaplus.com.br",
+		"role": "si",
+		"allow_validate": "N/A"
+	}
+}

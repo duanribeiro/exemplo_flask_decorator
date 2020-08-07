@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+
+    {% block styles %}
+        <link rel="stylesheet" type="text/css" href="/static/css/base.css">
+    {% endblock styles %}
+
+    {% block head %}
+
+    <style type="text/css">
+        .ansi2html-content { display: inline; white-space: pre-wrap; word-wrap: break-word; }
+        .body_foreground { color: #AAAAAA; }
+        .body_background { background-color: #000000; }
+        .body_foreground > .bold,.bold > .body_foreground, body.body_foreground > pre > .bold { color: #FFFFFF; font-weight: normal; }
+        .inv_foreground { color: #000000; }
+        .inv_background { background-color: #AAAAAA; }
+        .ansi1 { font-weight: bold; }
+        .ansi92 { color: #40ea40; }
+        a { color: #0088cc; }
+        pre { color: #FFF; }
+    </style>
+
+    <script type="text/javascript">
+        var selected_logfile = "";
+
+        clearfile = function(filename) {
+            $.get("log-clear?filename=" + filename, function( data ) {
+                document.getElementById(filename + "-contents").innerHTML = 'aguarde...'
+                updatefile(filename)
+            });
+        }
+
+        // updatefile = function(filename) {
+        //     // document.getElementById(filename + "-contents").innerHTML = 'carregando...'
+        //     $.get("log-update?filename=" + filename, function( data ) {
+        //         return data;
+        //     });
+        // }
+
+        download = function(filename) {
+            var downloadUrl = "download?filename=" + filename;
+            var link = document.createElement("a");
+            link.download = name;
+            link.href = downloadUrl;
+            link.click();
+        }
+
+        getview_url = function(filename, numlines) {
+            url = "log-update?filename=" + filename;
+            if (numlines)
+                url += "&numlines=" + numlines;
+
+            return url;
+        }
+
+
+        viewlog = function(filename, numlines) {
+            $('#title').html(filename)
+            selected_logfile = filename;
+            document.getElementById("file-contents").innerHTML = 'carregando...'
+            $.get(getview_url(filename, numlines), function( data ) {
+                document.getElementById("file-contents").innerHTML = data;
+                document.getElementById("file-parent").scrollTop = document.getElementById("file-parent").scrollHeight;
+            });
+            $('#log_contents').modal('show')
+        }
+
+        restart_service = function(service) {
+            $.ajax({
+                url: 'restart-service',
+                type: "POST",
+                contentType: "application/json",
+                dataType: "json",
+                data: JSON.stringify({'service': service}),
+                success: function (response) {
+                    alert('Restart Succeeded')
+                },
+                error: function (reason, xhr) {
+                    alert('Restart Failed')
+                }
+            });
+        } 
+    </script>
+
+    {% endblock head %}
+
+{% block main %}
+    <div class="container mt-5">
+        <div>
+            <button class="btn link float-right" onclick="download('{{ filename }}')">Download All <i class="fas fa-download"></i></div>
+
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">Módulo</th>
+                        <th scope="col"></th>
+                        <th scope="col"></th>
+                        <th scope="col"></th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for filename, msg in logs_msg.items() %}
+                    <tr>
+                        <td>{{ filename|replace('.log', '')|replace('rfx-','') }}</td>
+                        <td><button class="btn btn-link btn-sm" onclick="clearfile('{{ filename }}')">Clear</button></td>
+                        <td class="text-center"><button class="btn btn-link btn-sm" onclick="viewlog('{{ filename }}', 200)">View</button></td>
+                        <td class="text-center"><button class="btn btn-link btn-sm" onclick="download('{{ filename }}')">Download</button></td>
+                        <td class="text-center"><button class="btn btn-link btn-sm" onclick="restart_service('{{ filename|replace('.log', '') }}')">Restart</button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <div class="modal" tabindex="-1" role="dialog" id="log_contents">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="title"></h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div id="file-parent">
+            <pre id="file-contents" style="max-height: 600px;overflow:auto">
+                
+            </pre>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-info" onclick="viewlog(selected_logfile)">Load More...</button>
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+{% endblock %}
+
+{% block script_eof %}
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#nav-items li').removeClass('active');
+        $('#nav-item-system-logs').addClass('active');
+    });
+</script>
+{% endblock %}

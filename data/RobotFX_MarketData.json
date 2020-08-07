@@ -1,0 +1,50 @@
+{
+    "TradingDay": "15/07/2019",
+    "Futures": {
+        "USDBRL": {
+            "Timestamp": "09:16:05",
+            "UC1": {
+                "Bid": 4.0500,
+                "Ask": 4.1000,
+                "LastPrice": 4.1000
+            },
+            "UC2": {
+                "Bid": 4.0500,
+                "Ask": 4.1000,
+                "LastPrice": 4.1000
+            }
+        }
+    },
+    "CurrencyPairs": {
+        "USDBRL": {
+            "Bid": 4.0427,
+            "Ask": 4.0927,
+            "LastPrice": 4.0927,
+            "Timestamp": "09:16:05"
+        },
+        "EURUSD": {
+            "Bid": 1.12,
+            "Ask": 1.14,
+            "LastPrice": 1.14,
+            "Timestamp": "09:16:05"
+        },
+        "USDJPY": {
+            "Bid": 108.3,
+            "Ask": 108.5,
+            "LastPrice": 108.5,
+            "Timestamp": "09:16:05"
+        },
+        "CHFUSD": {
+            "Bid": 1.02,
+            "Ask": 1.03,
+            "LastPrice": 1.03,
+            "Timestamp": "09:16:05"
+        },
+        "GBPUSD": {
+            "Bid": 1.22,
+            "Ask": 1.23,
+            "LastPrice": 1.23,
+            "Timestamp": "09:16:05"
+        }
+    }
+}

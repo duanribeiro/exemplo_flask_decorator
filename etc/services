@@ -1,0 +1,16 @@
+rfx-systemd
+rfx-mktdata-curves
+rfx-mktdata-currencies
+rfx-fxsupplier
+rfx-frontend
+rfx-fixserver
+rfx-fxgogwd
+rfx-neworder
+rfx-quote-ndf
+rfx-quote-spot
+rfx-executionack
+rfx-reject
+rfx-flask_website
+rfx-legacy_mocks
+rfx-metrics
+rfx-history

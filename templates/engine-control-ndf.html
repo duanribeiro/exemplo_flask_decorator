@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Engine Control NDF
+{% endblock %}
+
+{% block head %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            engine_parameters_vue_obj = new SimpleApplyConfig({
+                el: '#div_engine_parameters',
+                delimiters: ["<%","%>"],
+                data: {
+                    engine_parameters: {{ engine_parameters|safe }},
+                },
+                methods: {
+                    validated_positive_number: function(input) {
+                        if (typeof(input) == 'number' && input <= 0) {
+                            return false
+                        }
+
+                        return true
+                    },
+                    validated: function() {
+                        if (!this.validated_string_input(this.engine_parameters.EngineOnlineEndTime)) {
+                            alert('The value for the Engine trading OFF field is invalid')
+                            return false
+                        }
+
+                        if (!this.validated_time_hhmm_input(this.engine_parameters.EngineOnlineEndTime)) {
+                            alert('The value for the Engine trading OFF field is not a valid time (hh:mm)')
+                            return false
+                        }
+
+                        this.engine_parameters.EngineOnlineEndTime = this.fix_time_hhmm_input(this.engine_parameters.EngineOnlineEndTime)
+
+                        if (!this.validated_string_input(this.engine_parameters.RFQ_Timeout)) {
+                            alert('The value for the RFQ Timeout (secs) field is invalid')
+                            return false
+                        }
+
+                        if (!this.validated_positive_number(this.engine_parameters.RFQ_Timeout)) {
+                            alert('The value for the RFQ Timeout (secs) field should be strictly positive')
+                            return false
+                        }
+
+                        if (!this.validated_string_input(this.engine_parameters.MAM_USD)) {
+                            alert('The value for the Maximum allowable movement USDBRL (bps) field is invalid')
+                            return false
+                        }
+
+                        if (!this.validated_positive_number(this.engine_parameters.MAM_USD)) {
+                            alert('The value for the Maximum allowable movement USDBRL (bps) field should be strictly positive')
+                            return false
+                        }
+
+                        if (!this.validated_string_input(this.engine_parameters.MAM_EUR)) {
+                            alert('The value for the Maximum allowable movement EURBRL (bps) field is invalid')
+                            return false
+                        }
+
+                        if (!this.validated_positive_number(this.engine_parameters.MAM_EUR)) {
+                            alert('The value for the Maximum allowable movement EURBRL (bps) field should be strictly positive')
+                            return false
+                        }
+
+                        if (!this.validated_string_input(this.engine_parameters.MAM_JPY)) {
+                            alert('The value for the Maximum allowable movement JPYBRL (bps) field is invalid')
+                            return false
+                        }
+
+                        if (!this.validated_positive_number(this.engine_parameters.MAM_JPY)) {
+                            alert('The value for the Maximum allowable movement JPYBRL (bps) field should be strictly positive')
+                            return false
+                        }
+
+                        return true
+                    },
+                    submit: function(event) {
+                        if (!this.validated()) {
+                            return
+                        }
+
+                        let url = '/fxndf/engine-parameters-ndf-put';
+                        let data = JSON.stringify({'engine_parameters': this.engine_parameters});
+                        let error_msg = 'ops...! An error has occurred on Engine Parameters NDF PUT call!';
+                        submitData(url, data, error_msg);
+                    },
+                },
+            })
+
+            $("#idApplyChanges").click(() => {
+                let vue_arr = [engine_parameters_vue_obj]
+                for (var ind in vue_arr) {
+                    vue_arr[ind].save()
+                }
+            })
+        });
+    </script>
+
+    <style type="text/css">
+        .bg-green {
+            background: #ffc000;
+            color: white;
+        }
+
+        .bg-red {
+            background: #ffc000;
+            color: white;
+        }
+
+        .bg-danger {
+            color: #FFF;
+        }
+
+        .xsucess {
+            color: #FFF;
+        }
+
+        select {
+            background: transparent;
+            text-align-last:center;
+        }
+
+        select > option {
+            background-color: #FF9E2A;
+            color: black;
+        }
+
+        .input_spread:focus {
+            background: #E74C3C !important;
+        }
+    </style>
+{% endblock %}
+
+{% block halt %}
+    {% include 'halt-ndf.html' %}
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        <div class="row mb-3 small">
+            <div id="div_engine_parameters" class="col-5">
+                <table class="table table-bordered table-sm mt-2">
+                    <tr class="text-center">
+                        <th class="table-th">NDF - Engine trading OFF</th>
+                        <td class="bg-orange">
+                            <input v-on:change="onchange_value" v-model="engine_parameters.EngineOnlineEndTime" class="border-0 col text-center input_spread align-middle" style="background: transparent;">
+                        </td>
+                    </tr>
+                    <tr class="text-center">
+                        <th class="table-th">NDF - RFQ Timeout (secs)</th>
+                        <td class="bg-orange">
+                            <input v-on:change="onchange_value" v-model.number="engine_parameters.RFQ_Timeout" class="border-0 col text-center input_spread" style="background: transparent;">
+                        </td>
+                    </tr>
+                    <tr class="text-center">
+                        <th class="table-th">NDF - Maximum allowable movement USDBRL (bps)</th>
+                        <td class="bg-orange align-middle">
+                            <input v-on:change="onchange_value" v-model.number="engine_parameters.MAM_USD" class="border-0 col text-center input_spread" style="background: transparent;">
+                        </td>
+                    </tr>
+                    <tr class="text-center">
+                        <th class="table-th">NDF - Maximum allowable movement EURBRL (bps)</th>
+                        <td class="bg-orange align-middle">
+                            <input v-on:change="onchange_value" v-model.number="engine_parameters.MAM_EUR" class="border-0 col text-center input_spread" style="background: transparent;">
+                        </td>
+                    </tr>
+                    <tr class="text-center">
+                        <th class="table-th">NDF - Maximum allowable movement JPYBRL (bps)</th>
+                        <td class="bg-orange align-middle">
+                            <input v-on:change="onchange_value" v-model.number="engine_parameters.MAM_JPY" class="border-0 col text-center input_spread" style="background: transparent;">
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block trading_status %}
+    {% include 'status-trading-ndf.html' %}
+{% endblock trading_status %}
+
+{% block script_eof %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#nav-items li').removeClass('active');
+            $('#nav-item-engine_control').addClass('active');
+        });
+    </script>
+{% endblock %}

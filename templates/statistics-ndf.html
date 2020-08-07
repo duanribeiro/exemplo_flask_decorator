@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Statistics NDF
+{% endblock title %}
+
+{% block head %}
+    <script type="text/javascript">
+        const SORTED_CURRENCIES = {{ sorted_currencies | safe }}
+        const DAILY_STATS = JSON.parse({{ daily_stats | tojson }})
+    </script>
+
+    <script src="/static/scripts/statistics-ndf.js"></script>
+    <script src="/static/plotly-latest.min.js"></script>
+{% endblock head %}
+
+{% block main %}
+<div id="table_daily_stats" class="container-fluid">
+    <div class="row mx-2 mt-2">
+        <div class="col-5 pl-0">
+            <div id="stats_tab" class="d-flex flex-column">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-sm small">
+                        <tr class="header text-center">
+                            <th style="width:60%">Total RFQs</th>
+                            <td>[[ daily_stats.number_RFQs_total ]]</td>
+                        </tr>
+                        <tr class="header text-center">
+                            <th style="width:60%">Total RFQs Month</th>
+                            <td>[[ daily_stats.number_RFQs_month ]]</td>
+                        </tr>
+                        <tr class="header text-center">
+                            <th style="width:60%">Total RFQs Last 5 days</th>
+                            <td>[[ daily_stats.number_RFQs_last_5_days ]]</td>
+                        </tr>
+                        <tr class="header text-center">
+                            <th style="width:60%">Total RFQs Last 10 days</th>
+                            <td>[[ daily_stats.number_RFQs_last_10_days ]]</td>
+                        </tr>
+                        <tr class="header text-center">
+                            <th style="width:60%">Total RFQs Last 30 days</th>
+                            <td>[[ daily_stats.number_RFQs_last_30_days ]]</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-6 card">
+                    <h6 class="text-center p-2 card-title">Transactions Report</h6>
+                    <form class="d-flex flex-column" action="/fxndf/statistics-report">
+                        <div class="form-group m-2">
+                            <label for="startDate" class="small">Start Date</label>
+                            <input type="date" class="form-control" id="startDate" name="startDate" required>
+                        </div>
+
+                        <div class="form-group m-2">
+                            <label for="endDate" class="small">End Date</label>
+                            <input type="date" class="form-control" id="endDate" name="endDate" required>
+                        </div>
+
+                        <div class="align-self-end my-2">
+                            <button type="submit" class="btn btn-primary m-2">
+                                Export CSV
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-7 border border-dark">
+            <div id="stats_chart"></div>
+        </div>
+    </div>
+    <div class="row mx-2 mt-4">
+        <div class="table-responsive">
+            <table id="summary_table" class="table table-bordered table-hover table-sm small">
+                <thead>
+                    <tr class="header text-center">
+                        <th v-for="column in daily_stats_thead"> [[ column ]] </th>
+                        <th v-for="ccy in sorted_currencies"> [[ ccy ]] Amt.</th>
+                    </tr>
+                </thead>
+                <tbody class="text-center text-primary">
+                    <tr v-for="day_trade_info in daily_stats.daily_trade_info">
+                        <td> <a href="#" v-on:click="open_transact_info_popup(day_trade_info.transact_date)"
+                                style="text-decoration: underline"> [[ day_trade_info.transact_date ]] </a> </td>
+                        <td> [[ day_trade_info.number_RFQs_total ]] </td>
+                        <td> [[ day_trade_info.number_RFQs_deal ]] </td>
+                        <td> <a href="#" v-on:click="open_reject_info_popup(day_trade_info.transact_date)"
+                                style="text-decoration: underline"> [[ day_trade_info.number_RFQs_rejected ]] </a> </td>
+                        <td> [[ day_trade_info.number_RFQs_lost ]] </td>
+                        <td> [[ processCurrency(day_trade_info.daily_revenue) ]] </td>
+                        <td> [[ processCurrency(day_trade_info.USD_amount) ]] </td>
+                        <td> [[ processCurrency(day_trade_info.EUR_amount) ]] </td>
+                        <td> [[ processCurrency(day_trade_info.JPY_amount) ]] </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock main %}
+
+{% block halt %}
+{% endblock %}
+
+{% block script_eof %}
+    <link rel="stylesheet" type="text/css" href="/static/DataTables/datatables.min.css"/>
+    <script type="text/javascript" src="/static/DataTables/datatables.min.js"></script>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#nav-items li').removeClass('active');
+            $('#nav-item-statistics_ndf').addClass('active');
+
+            table = $('#summary_table').DataTable({
+                "paging":         false,
+                "ordering":       false,
+                "info":           false,
+                "searching":      false,
+                "fixedHeader":    true,
+                "scrollCollapse": true,
+                "scrollY":        "32vh",
+            });
+        });
+    </script>
+{% endblock script_eof%}

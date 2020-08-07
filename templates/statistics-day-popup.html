@@ -1,0 +1,83 @@
+{% extends "base-popup.html" %}
+
+{% block head %}
+    <script type="text/javascript">
+        const TRANSACT_DATE_INFO = JSON.parse({{ transact_date_info | tojson }})
+    </script>
+    
+    <script src="/static/plotly-latest.min.js"></script>
+    <script src="/static/scripts/base-statistics-popup.js"></script>
+{% endblock head %}
+
+{% block main %}
+    <div id="vue_main_div" class="container-fluid">
+        <div class="row m-0 mb-3 small">
+            <div class="col-md-6 text-white d-flex align-items-start flex-column">
+                <table class="table table-bordered table-hover table-sm">
+                    <tr class="header text-center">
+                        <th style="width:60%">Trading Day</th>
+                        <td>[[transact_date]]</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th style="width:60%">Number RFQ</th>
+                        <td>[[number_RFQs_total]]</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th style="width:60%">Number Deals</th>
+                        <td>[[number_RFQs_deal]]</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th style="width:60%">Number Rejected</th>
+                        <td>[[number_RFQs_rejected]]</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th style="width:60%">Number Lost</th>
+                        <td>[[number_RFQs_lost]]</td>
+                    </tr>
+                </table>
+                <table class="table table-bordered table-hover table-sm">
+                    <tr class="header text-center">
+                        <th style="width:60%">USD Amount</th>
+                        <td>[[ processCurrency(USD_amount) ]]</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th style="width:60%">EUR Amount</th>
+                        <td>[[ processCurrency(EUR_amount) ]]</td>
+                    </tr>
+                    <tr class="header text-center">
+                        <th style="width:60%">JPY Amount</th>
+                        <td>[[ processCurrency(JPY_amount) ]]</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6 text-white d-flex flex-column">
+                <div id="stats_chart" style="height: 40vh"></div>
+            </div>
+        </div>
+        <div class="row m-0 mb-3 small">
+            <table class="table table-bordered table-hover table-sm">
+                <thead>
+                    <tr class="header text-center table-th-25">
+                        <th colspan="5" style="">Most Active Counterparts</th>
+                    </tr>
+                    <tr>
+                        <th>Ranking</th>
+                        <th>DealCode</th>
+                        <th>Counterparty</th>
+                        <th>CNPJ</th>
+                        <th>Revenue (BRL)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(cp, idx) in most_active_counterparts">
+                        <td v-bind:style="">[[ idx+1 ]]</td>
+                        <td v-bind:style="">[[ cp.customer_deal_code ]]</td>
+                        <td v-bind:style="">[[ cp.customer_str ]]</td>
+                        <td v-bind:style="">[[ cp.customer_id | formatCNPJ ]]</td>
+                        <td v-bind:style="">[[ processCurrency(cp.revenue_brl) ]]</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock main %}

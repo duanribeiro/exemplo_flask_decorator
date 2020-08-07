@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}User Management{% endblock %}
+
+{% block head %}
+    <script src="/static/vue.js"></script>
+    <script type="text/javascript" src="/static/robotmarketdata.js"></script>
+
+    <script type="text/javascript">
+        window.onload = function () {
+            app_user_data = new Vue({
+                el: '#div_user_data',
+                delimiters: ["[[","]]"],
+                data: {
+                    user_data: {{ user_data| safe }},
+                    exception: {{ exception| safe }},
+                },
+                mounted() {
+                    if (this.exception) {
+                        console.log('Houve uma excecao: ' + this.exception);
+                    }
+                },
+                filters: {
+                    show_string: function(value) {
+                        if (!value) return value;
+
+                        if ((value[0] == "'" && value[value.length - 1] == "'") ||
+                            (value[0] == '"' && value[value.length - 1] == '"')) {
+                            return value.slice(1, value.length - 1);
+                        }
+
+                        return value;
+                    }
+                },
+                methods: {
+                    user_addition: function() {
+                        window.location.href = '/auth/user_addition'
+                    },
+                    user_edit: function(username) {
+                        window.location.href = '/auth/user_editing/' + String(username)
+                    }
+                }
+            });
+        }
+    </script>
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        <div class="row mt-2 p-2">
+            <div class="col-12 table-responsive">
+                <div id="div_user_data">
+                    <div class="col mb-3 float-right">
+                        <button type='button' id="add_user" class="btn btn-sm small mt-4 bg-orange text-white float-right" v-on:click="user_addition">+ USER</a>
+                        </button>
+                    </div>
+                    
+                    <table id="table_user" class="table table-bordered table-hover table-sm small">
+                        <thead>
+                            <tr class="header text-center">
+                                <th>Username</th>
+                                <th>E-mail</th>
+                                <th>Role</th>
+                                <th>Override</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-center text-primary">
+                            <tr v-for="x in user_data">
+                                <td v-bind:style="">
+                                    <a href="#" v-on:click="user_edit(x.username)">[[ x.username ]]</a>
+                                </td>
+                                <td>[[ x.email ]]</td>
+                                <td v-bind:style="">[[ x.role ]]</td>
+                                <td>[[ x.allow_validate | show_string ]]</td>
+                            </tr>
+                            <tr v-if="Object.keys(user_data).length === 0">
+                                <td class="w-50" colspan="4">No User available!</td>
+                            </tr>
+                        </tbody>
+                    </table>                    
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script_eof %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#nav-items li').removeClass('active');
+            $('#nav-item-usr_mgmt').addClass('active');
+        });
+    </script>
+{% endblock %}

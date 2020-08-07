@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+{% block title %}Blotter NDF - Supplier{% endblock %}
+
+<!-- Begin page content -->
+{% block head %}
+    <script type="text/javascript" src="/static/robotmarketdata.js"></script>
+
+    <script type="text/javascript">
+        currency_formatter = Intl.NumberFormat('en-US',  {'minimumFractionDigits': 2, 'maximumFractionDigits': 2});
+        sound_deal = new Audio('/static/sounds/fxsupplier_blotter.wav');
+
+        var processFloatNumber = function(num) {
+            return currency_formatter.format(num);
+        }
+
+        Vue.filter('currency', function (value) {
+            return currency_formatter.format(value);
+        });
+
+        var dropComma = function(x) {
+            while (x.indexOf(',') != -1) {
+                x = x.replace(',', '');
+            }
+            return x;
+        }
+
+        var processCurrency = function(data) {
+            let tk = Object.keys(data)
+            for (const k of tk) {
+                data[k + '_raw'] = data[k]
+                data[k] = processFloatNumber(data[k])
+            }
+            return data
+        }
+
+        var play_sound_deal = function(){
+            sound_deal.cloneNode(true).play().catch(error => console.log("som desabilitado"))
+        }
+
+        filter_deal = function(data) {
+            if (data.security_type == "FXNDF" && data.mtype == "DEAL") {
+                return true;
+            };
+
+            return false;
+        }
+
+        $(document).ready(function() {
+            toastr.options.timeOut = 0
+            toastr.options.extendedTimeOut = 0
+            toastr.options.closeButton = true
+            init_market_data_panel('/fxsupplier/supplier_data/NDF');
+
+            app_blotter = new Vue({
+                el: '#table_blotter',
+                delimiters: ['[[', ']]'],
+                data: {
+                    initialized: false,
+                    trades: [],
+                },
+                methods: {
+                    handleCallback: function(event) {
+                        let json_data = JSON.parse(event.data);
+                        this.displayData(json_data);
+                        if (filter_deal(json_data))
+                            play_sound_deal()
+                    },
+                    init: function() {
+                        $.ajax({
+                            url: '/fxsupplier/transactions',
+                            dataType: 'json',
+                            type: 'get',
+                            contentType: 'application/json',
+                            data: '',
+                            processData: false,
+                            success: (data, textStatus, jQxhr) => {
+                                this.trades = []
+                                data.sort((a, b) => (a.timestamp > b.timestamp) ? 1 : -1);
+                                for (d in data){
+                                    this.displayData(data[d])
+                                }
+                                this.initialized = true;
+                            },
+                            error: (jqXhr, textStatus, errorThrown) => {
+                                console.log('Init Table Blotter error'+errorThrown)
+                            }
+                        });
+                    },
+                    displayData: function(data) {
+                        if (data.content_empty == 1 || !filter_deal(data))
+                            return;
+
+                        let tradeLen = this.trades.length;
+                        let index;
+                        for (index = 0; index < tradeLen; index++) {
+                            if (this.trades[index].quote_req_id == data.quote_req_id) {
+                                break;
+                            }
+                        }
+
+                        data.amount = processFloatNumber(data.amount);
+                        data.amountbrl = processFloatNumber(data.amountbrl);
+                        data.pv_ccy = processFloatNumber(data.present_value_ccy)
+
+                        if (data.mtype === 'REJECTED' && this.initialized) {
+                            showQuoteReqRejected(data.id, data.rejected_text)
+                        }
+
+                        if (index < tradeLen) {
+                            this.trades[index] = data;
+                        } else {
+                            this.trades.splice(0, 0, data);
+                        }
+
+                        this.$forceUpdate();
+                        Vue.nextTick(function () {
+                            try { table.columns.adjust(); } catch (e) { }
+                            if ($('#tbody_blotter').children().length - $('#tbody_blotter').children().filter(':empty').length == 1) {
+                                $(".dataTables_empty").show();
+                            } else {
+                                $(".dataTables_empty").hide();
+                            }
+                        });
+                    },
+                    startPage: function() {
+                        this.setupEventSource();
+                    },
+                    setupEventSource: function() {
+                        this.init();
+                        source = new EventSource("/fxsupplier/fxsupplier-stream");
+                        source.addEventListener('message', this.handleCallback, false);
+                        source.onerror = function(e) {
+                            console.log('Retry SSE connection...');
+                            source.close();
+                            setTimeout(() => { app_blotter.setupEventSource() }, 2000);
+                        };
+                    },
+                    open_a_popup: function(deal_id) {
+                        open_popup(deal_id)
+                    },
+                },
+                beforeMount(){
+                    this.startPage()
+                },
+            });
+
+            var app_tabs = new Vue({
+                el: '#id_ul_tabs',
+                delimiters: ['[[', ']]'],
+                data: {
+                    myTabs: [{id: 'id-pv', name: 'PV', href: '#tab-pv', ref: 'idPV',},
+                             {id: 'id-amount', name: 'Amount', href: '#tab-amount', ref: 'idAmount',}],
+                },
+                mounted() {
+                    this.observer = new MutationObserver(mutations => {
+                        for (const m of mutations) {
+                            const newValue = m.target.getAttribute(m.attributeName)
+                            this.$nextTick(() => {
+                                this.onClassChange(newValue, m.oldValue, m.target)
+                            });
+                        }
+                    });
+
+                    for(ind in this.$refs["tab.ref"]) {
+                        this.observer.observe(this.$refs["tab.ref"][ind], {
+                            attributes: true,
+                            attributeOldValue : true,
+                            attributeFilter: ['class'],
+                        })
+                    }
+
+                    this.$refs["tab.ref"][0].click()
+                },
+                beforeDestroy() {
+                    this.observer.disconnect()
+                },
+                methods: {
+                    onClassChange(classAttrValue, oldValue, elem) {
+                        const classList = classAttrValue.split(' ')
+                        if (classList.includes('active')) {
+                            if (!classList.includes('gray-tab-selection')) {
+                                $('#' + elem.id).addClass('gray-tab-selection')
+                            }
+                        } else {
+                            if (classList.includes('gray-tab-selection')) {
+                                $('#' + elem.id).removeClass('gray-tab-selection')
+                            }
+                        }
+                    },
+                },
+            });
+
+            app_pvs = new Vue({
+                el: '#table_pvs',
+                delimiters: ['[[', ']]'],
+                data: {
+                    amounties: [],
+                    sorted_currencies: {{ sorted_currencies|safe }},
+                },
+                methods: {
+                    pooling: function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxndf/balance_ndf', _data => {
+                                this.displayData(_data);
+                            }).fail(function() {
+                                // TODO: Fail treatment
+                                setTimeout(() => { app_amounties.pooling() }, 3000)
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling() }, waitTime)
+                            })
+                    },
+                    displayData: function(data) {
+                        data = JSON.parse(data)
+                        let tk = this.sorted_currencies
+                        this.amounties = [];
+                        for (const k of tk) {
+                            let td = data[k]
+                            td = processCurrency(td)
+                            td.Currency = k
+                            this.amounties.push(td)
+                        }
+                        this.$forceUpdate();
+                    },
+                },
+                beforeMount(){
+                    this.pooling();
+                },
+            });
+
+            app_amounties = new Vue({
+                el: '#table_amounties',
+                delimiters: ['[[', ']]'],
+                data: {
+                    amounties: [],
+                    sorted_currencies: {{ sorted_currencies|safe }},
+                },
+                methods: {
+                    pooling: function() {
+                            var startTime = new Date().getTime();
+                            var self = this
+                            $.get('/fxndf/balance_ndf', _data => {
+                                this.displayData(_data);
+                            }).fail(function() {
+                                // TODO: Fail treatment
+                                setTimeout(() => { app_amounties.pooling() }, 3000)
+                            }).then(() => {
+                                var requestTime = new Date().getTime() - startTime
+                                var waitTime = requestTime > 2000 ? 1 : 2000 - requestTime
+                                setTimeout(() => { this.pooling() }, waitTime)
+                            })
+                    },
+                    displayData: function(data) {
+                        data = JSON.parse(data)
+                        let tk = this.sorted_currencies
+                        this.amounties = [];
+                        for (const k of tk) {
+                            let td = data[k]
+                            td = processCurrency(td)
+                            td.Currency = k
+                            this.amounties.push(td)
+                        }
+                        this.$forceUpdate();
+                    },
+                },
+                beforeMount(){
+                    this.pooling();
+                },
+            });
+        });
+
+        
+    </script>
+
+    <style type="text/css">
+        a {
+            color: #FF9E2A !important; 
+        }
+    </style>
+{% endblock %}
+
+{% block halt %}
+    {% include halt %}
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+
+        {% include 'panel-market-data-quotes.html' %}
+
+        <div class="row mt-2">
+            <div class="col table-responsive">
+            <table id="table_blotter" class="table table-bordered table-hover table-sm small">
+                <thead>
+                    <tr class="header text-center">
+                        <th class="font-weight-bold">Status</th>
+                        <th class="font-weight-bold">Deal ID</th>
+                        <th class="font-weight-bold">DealCode</th>
+<!--                    <th class="font-weight-bold">Counterparty</th>
+                        <th class="font-weight-bold">CNPJ</th> -->
+                        <th class="font-weight-bold">Spot</th>
+                        <th class="font-weight-bold">PV</th>
+                        <th class="font-weight-bold">Amount</th>
+                        <th class="font-weight-bold">CCY</th>
+                        <th class="font-weight-bold">DC</th>
+                        <th class="font-weight-bold">Maturity</th>
+                        <th class="font-weight-bold">FWD-Buy</th>
+                        <th class="font-weight-bold">FWD-Sell</th>
+                    </tr>
+                </thead>
+               <tbody id="tbody_blotter" class="text-center text-primary">
+                   <tr v-for="x in trades">
+                       <td v-bind:style="{ color: [[ x.color ]] }">
+                           [[ x.mtype ]]
+                       </td>
+                       <td v-bind:style="">
+                           [[ x.quote_req_id ]]
+                       </td>
+                       <td v-bind:style="">
+                           [[ x.dealcode ]]
+                       </td>
+<!--                        <td v-bind:style="">
+                           [[ x.counterparty ]]
+                       </td>
+                       <td class="td-cnpj-formatted">
+                           [[ x.cnpj | formatCNPJ ]]
+                       </td> -->
+
+                        <td v-bind:style="">
+                           [[ x.s_cost ]]
+                        </td>
+                        <td v-bind:style="">
+                           [[ x.pv_ccy ]]
+                        </td>
+                        <td v-bind:style="">
+                           [[ x.amount ]]
+                       </td>
+                       <td v-bind:style="">
+                           [[ x.currency ]]
+                       </td>
+                       <td v-bind:style="">
+                           [[ x.dc ]]
+                       </td>
+                       <td v-bind:style="">
+                           [[ x.maturity ]]
+                       </td>
+                       <td v-bind:style="">
+                           [[ x.buy ]]
+                       </td>
+                       <td v-bind:style="">
+                           [[ x.sell ]]
+                       </td>
+                   </tr>
+               </tbody>
+            </table>
+            </div>
+        </div>
+
+        <div class="row">
+            &nbsp;
+        </div>
+
+        <ul id="id_ul_tabs" class="nav nav-tabs small">
+            <li class="nav-item" v-for="(tab, idx) in myTabs">
+                <a :id="tab.id" class="nav-link" data-toggle="tab" style="border: 1px solid gray; border-bottom: 0px;" :href="tab.href" ref="tab.ref">[[ tab.name ]]</a>
+            </li>
+        </ul>
+
+        <div class=" tab-content">
+            <div class="col-12 tab-pane container active" id="tab-amount">
+                <table id="table_amounties" class="table table-bordered table-sm small mt-2">
+                    <thead>
+                        <tr class="header text-center table-th-25">
+                            <th rowspan="2"></th>
+                            <th></th>
+                            <th colspan="8" style="color: #00bc8c !important; font-weight: bold;">Buy</th>
+                            <th colspan="8" style="color: #E74C3C !important; font-weight: bold;">Sell</th>
+                        </tr>
+                        <tr class="header text-center table-th-25">
+                            <th class="font-weight-bold small-table-cell-formatted">Net</th>
+                            <th class="font-weight-bold small-table-cell-formatted">Total</th>
+                            <th class="font-weight-bold small-table-cell-formatted">1 - 30</th>
+                            <th class="font-weight-bold small-table-cell-formatted">31 - 60</th>
+                            <th class="font-weight-bold small-table-cell-formatted">61 - 90</th>
+                            <th class="font-weight-bold small-table-cell-formatted">91 - 180</th>
+                            <th class="font-weight-bold small-table-cell-formatted">181 - 360</th>
+                            <th class="font-weight-bold small-table-cell-formatted">361 - 720</th>
+                            <th class="font-weight-bold small-table-cell-formatted">721 -</th>
+                            <th class="font-weight-bold small-table-cell-formatted">Total</th>
+                            <th class="font-weight-bold small-table-cell-formatted">1 - 30</th>
+                            <th class="font-weight-bold small-table-cell-formatted">31 - 60</th>
+                            <th class="font-weight-bold small-table-cell-formatted">61 - 90</th>
+                            <th class="font-weight-bold small-table-cell-formatted">91 - 180</th>
+                            <th class="font-weight-bold small-table-cell-formatted">181 - 360</th>
+                            <th class="font-weight-bold small-table-cell-formatted">361 - 720</th>
+                            <th class="font-weight-bold small-table-cell-formatted">721 -</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="text-center" v-for="amount in amounties">
+                            <th class="table-th font-weight-bold">[[ amount.Currency ]]</th>
+                            <td class="font-weight-bold">[[ amount.NetAmount_raw | currency ]]</td>
+                            <td>[[ amount.Buy_raw.TotalAmount | currency ]]</td>
+                            <td v-for="value in amount.Buy_raw.PartialAmount">[[ value | currency ]]</td>
+                            <td>[[ amount.Sell_raw.TotalAmount | currency ]]</td>
+                            <td v-for="value in amount.Sell_raw.PartialAmount">[[ value | currency ]]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-12 tab-pane container fade" id="tab-pv">
+                <table id="table_pvs" class="table table-bordered table-sm small mt-2">
+                    <thead>
+                        <tr class="header text-center table-th-25">
+                            <th rowspan="2"></th>
+                            <th></th>
+                            <th colspan="8" style="color: #00bc8c !important; font-weight: bold;">Buy</th>
+                            <th colspan="8" style="color: #E74C3C !important; font-weight: bold;">Sell</th>
+                        </tr>
+                        <tr class="header text-center table-th-25">
+                            <th class="font-weight-bold small-table-cell-formatted">Net</th>
+                            <th class="font-weight-bold small-table-cell-formatted">Total</th>
+                            <th class="font-weight-bold small-table-cell-formatted">1 - 30</th>
+                            <th class="font-weight-bold small-table-cell-formatted">31 - 60</th>
+                            <th class="font-weight-bold small-table-cell-formatted">61 - 90</th>
+                            <th class="font-weight-bold small-table-cell-formatted">91 - 180</th>
+                            <th class="font-weight-bold small-table-cell-formatted">181 - 360</th>
+                            <th class="font-weight-bold small-table-cell-formatted">361 - 720</th>
+                            <th class="font-weight-bold small-table-cell-formatted">721 -</th>
+                            <th class="font-weight-bold small-table-cell-formatted">Total</th>
+                            <th class="font-weight-bold small-table-cell-formatted">1 - 30</th>
+                            <th class="font-weight-bold small-table-cell-formatted">31 - 60</th>
+                            <th class="font-weight-bold small-table-cell-formatted">61 - 90</th>
+                            <th class="font-weight-bold small-table-cell-formatted">91 - 180</th>
+                            <th class="font-weight-bold small-table-cell-formatted">181 - 360</th>
+                            <th class="font-weight-bold small-table-cell-formatted">361 - 720</th>
+                            <th class="font-weight-bold small-table-cell-formatted">721 -</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="text-center" v-for="amount in amounties">
+                            <th class="table-th font-weight-bold">[[ amount.Currency ]]</th>
+                            <td class="font-weight-bold">[[ amount.NetPV_raw | currency ]]</td>
+                            <td>[[ amount.Buy_raw.TotalPV | currency ]]</td>
+                            <td v-for="value in amount.Buy_raw.PartialPV">[[ value | currency ]]</td>
+                            <td>[[ amount.Sell_raw.TotalPV | currency ]]</td>
+                            <td v-for="value in amount.Sell_raw.PartialPV">[[ value | currency ]]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block trading_status %}
+    {% include 'status-trading-supplier.html' %}
+{% endblock trading_status %}
+
+{% block script_eof %}
+<link rel="stylesheet" type="text/css" href="/static/DataTables/datatables.min.css"/>
+<script type="text/javascript" src="/static/DataTables/datatables.min.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#nav-items li').removeClass('active');
+        $('#nav-item-blotter_ndf').addClass('active');
+
+        table = $('#table_blotter').DataTable({
+            "paging":         false,
+            "ordering":       false,
+            "info":           false,
+            "searching":      false,
+            "fixedHeader":    true,
+            "scrollCollapse": true,
+            "scrollY":        "40vh",
+        });
+
+        setTimeout(function(){
+            try { table.columns.adjust(); } catch (e) { }
+        }, 100);
+    });
+</script>
+{% endblock %}
+

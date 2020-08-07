@@ -1,0 +1,194 @@
+{% extends "base-popup.html" %}
+
+<!-- Begin page content -->
+{% block head %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+            var app = new SimpleApplyConfig({
+                el: '#vue_main_div',
+                delimiters: ['[[', ']]'],
+                data: {
+                    counterparty: {{ counterparty | safe }},
+                    marketType: [1, 2],
+                    defaultTransactionsOptions: {
+                        'Primary': ['IMPORT_EXPORT', 'FINANCIAL'],
+                        'Secondary': ['INTERBANK_CLEARING', 'INTERBANK_NO_CLEARING']
+                    },
+                    defaultTransactions: null,
+                    alias_ndf: {{ alias_ndf | safe }},
+                    alias_spot: {{ alias_spot | safe }},
+                    selected_ndf: {{ selected_ndf | safe }},
+                    selected_spot: {{ selected_spot | safe }},
+                    readonly_cnpj: {{ read_only | safe }}
+                },
+                beforeMount: function() {
+                    this.handle_market_type()
+                },
+                methods: {
+                    validate_data: function() {
+                        if (!this.counterparty.Cnpj) {
+                            return false
+                        }
+
+                        if (!this.counterparty.Alias) {
+                            return false
+                        }
+
+                        if (!this.counterparty.CounterpartyName) {
+                            return false
+                        }
+
+                        return true
+                    },
+                    submit: function(event) {
+                        if (!this.validate_data()) {
+                            alert('Fill out both the CNPJ, Alias and Name fields!')
+                            return
+                        }
+
+                        let url = '/fxconfig/counterparty-config-put'
+                        let data = JSON.stringify({'counterparty': this.counterparty,
+                                'selected_spot': this.selected_spot,
+                                'selected_ndf': this.selected_ndf,
+                                'update_case': this.readonly_cnpj})
+                        let error_msg = 'ops...! An error has occurred on Counterparties PUT call!'
+                        submitData(url, data, error_msg, this.reload, false, "Counterparty already exists")
+                    },
+                    reload: function() {
+                        window.opener.postMessage('reload', '*')
+                        open(location, '_self').close()
+                    },
+                    onchange_select: function(event) {
+                        this.handle_market_type()
+                    },
+                    handle_market_type: function() {
+                        if (!this.counterparty['FXMarketType']) {
+                            this.counterparty['FXMarketType'] = 1
+                        }
+
+                        if (String(this.counterparty['FXMarketType']) == '1') {
+                            this.defaultTransactions = this.defaultTransactionsOptions['Primary']
+                        } else if (String(this.counterparty['FXMarketType']) == '2') {
+                            this.defaultTransactions = this.defaultTransactionsOptions['Secondary']
+                        }
+
+                        try {
+                            if(!(String(this.counterparty['DefaultFXTransaction']) in this.defaultTransactions)) {
+                                this.counterparty['DefaultFXTransaction'] = this.defaultTransactions[0]
+                            }
+                        }
+                        catch(err) {
+                        }
+                    }
+                },
+                filters: {
+                    placeholder4empty: function(value) {
+                        if (String(value) === '') {
+                            return '-'
+                        }
+                        return value
+                    }
+                }
+            })
+
+            $('#cnpj_input_field').bind('keypress', function(event) {
+                if (event.keyCode < 48 || event.keyCode > 57) {
+                    event.preventDefault()
+                }
+            })
+        })
+    </script>
+
+    <style>
+        table {
+            table-layout: fixed;
+            word-wrap: break-word;
+        }
+    </style>
+{% endblock %}
+
+{% block main %}
+    <div id="vue_main_div" class="container-fluid">
+        <div class="row m-0 mb-2 mt-2 small">
+            <div class="col-md-8 text-white d-flex align-items-start flex-column">
+                <table class="table table-bordered table-hover table-sm small">
+                    <tr class="header text-center">
+                        <th class="w-25">CNPJ:</th>
+                        <td class="bg-orange w-75"><input type="number" id="cnpj_input_field" v-model="counterparty.Cnpj" class="p_input_class border-0 col text-center bg-transparent" v-bind:readonly="readonly_cnpj" placeholder="Enter CNPJ"></td>
+                    </tr>
+                    <tr class="header text-center mt-4">
+                        <th class="w-25">Alias:</th>
+                        <td class="bg-orange w-75"><input type="text" v-model="counterparty.Alias" class="p_input_class border-0 col text-center bg-transparent" placeholder="Enter Alias"></td>
+                    </tr>
+
+                    <tr class="header text-center">
+                        <th class="w-25">Name:</th>
+                        <td class="bg-orange w-75"><input type="text" v-model="counterparty.CounterpartyName" class="p_input_class border-0 col text-center bg-transparent" placeholder="Enter Name"></td>
+                    </tr>
+
+                    <tr class="header text-center">
+                        <th class="w-auto">Products:</th>
+                        <td class="bg-orange w-auto">
+                            <span style="vertical-align: middle; display: inline;">
+                                <input type="checkbox" id="ich-fx-ndf" value="FXNDF" v-model="counterparty.Products" class="mb-0">
+                                <label for="ich-fx-ndf" class="mr-2 mb-0">FXNDF</label>
+                                <input type="checkbox" id="ich-fx-spot" value="FXSPOT" v-model="counterparty.Products" class="mb-0">
+                                <label for="ich-fx-spot" class="mb-0">FXSPOT</label>
+                            </span>
+                        </td>
+                    </tr>
+
+                    <tr class="header text-center" v-if="counterparty.Products.includes('FXSPOT')">
+                        <th class="w-auto">Market Type:</th>
+                        <td class="bg-orange">
+                            <select v-model="counterparty.FXMarketType" @change="onchange_select" class="form-control form-control-sm table-select text-last-center h-auto">
+                                <option v-if="marketType" v-for="item in marketType" :value="item" class="w-100">
+                                    <template v-if="String(item) == '1'">
+                                        Primary
+                                    </template>
+                                    <template v-if="String(item) == '2'">
+                                        Secondary
+                                    </template>
+                                </option>
+                            </select>
+                        </td>
+                    </tr>
+
+                    <tr class="header text-center" v-if="counterparty.Products.includes('FXSPOT')">
+                        <th class="w-auto">Default Transaction:</th>
+                        <td class="bg-orange">
+                            <select v-model="counterparty.DefaultFXTransaction" class="form-control form-control-sm table-select text-last-center h-auto">
+                                <option v-for="item in defaultTransactions" :value="item">[[ item ]]</option>
+                            </select>
+                        </td>
+                    </tr>
+
+                    <tr class="header text-center" v-if="counterparty.Products.includes('FXSPOT')">
+                        <th class="w-auto">Spot Group:</th>
+                        <td class="bg-orange">
+                            <select v-model="selected_spot" class="form-control form-control-sm table-select text-last-center h-auto">
+                                <option v-for="item in alias_spot" :value="item">[[ item|placeholder4empty ]]</option>
+                            </select>
+                        </td>
+                    </tr>
+
+                    <tr class="header text-center" v-if="counterparty.Products.includes('FXNDF')">
+                        <th class="w-auto">NDF Group:</th>
+                        <td class="bg-orange">
+                            <select v-model="selected_ndf" class="form-control form-control-sm table-select text-last-center h-auto">
+                                <option v-for="item in alias_ndf" :value="item">[[ item|placeholder4empty ]]</option>
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+
+                <div class="card-group mt-4">
+                    <button type="button" id="#" class="btn btn-sm small bg-orange text-white float-right" v-on:click="submit">Save
+                    </button>
+                    <span class="w-min font-weight-bold text-danger border border-danger rounded p-1 ml-2 align-middle d-none">Error: This CNPJ is invalid!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+

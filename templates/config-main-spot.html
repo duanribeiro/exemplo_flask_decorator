@@ -1,0 +1,484 @@
+{% extends "base.html" %}
+
+{% block title %}Configurations{% endblock %}
+
+<!-- Begin page content -->
+{% block head %}
+    <script type="text/javascript">
+        window.addEventListener('message', event => {
+            // IMPORTANT: check the origin of the data!
+            if (event.origin.includes(location.host) && event.origin.includes(location.port)) {
+                // The data was sent from your site.
+                // Data sent with postMessage is stored in event.data:
+                let data = event.data
+                if (data && data.includes && data.includes('reload')) {
+                    document.location.reload(false)
+                }
+            } else {
+                // The data was NOT sent from your site!
+                // Be careful! Do not use it. This else branch is
+                // here just for clarity, you usually shouldn't needed.
+                return;
+            }
+        });
+
+        $(document).ready(function() {
+            var app_tabs_legal_entities = new Vue({
+                el: '#id_ul_tabs_legal_entities',
+                delimiters: ['[[', ']]'],
+                data: {
+                    myLETabs: [{id: 'id-counterparties', name: 'Counterparties', href: '#tab_counterparties', ref: 'idCounterparty',},
+                             {id: 'id-groups', name: 'Groups', href: '#tab-groups', ref: 'idGroups',}],
+                },
+            });
+
+            counterparties_vue_obj = new SimpleApplyConfig({
+                el: '#tab_counterparties',
+                delimiters: ["<%","%>"],
+                data: {
+                    counterparties: {{ counterparties|safe }},
+                    market_type_data: {'1': 'Primary', '2': 'Secondary'},
+                    default_transaction_data: {'1': ['IMPORT_EXPORT', 'FINANCIAL'],
+                                               '2': ['INTERBANK_NO_CLEARING', 'INTERBANK_CLEARING']},
+                    deleted_counterparties: []
+                },
+                filters: {
+                    // a computed getter
+                    getMarketType: function (value) {
+                        if (String(value) == '1') {
+                            return 'Primary'
+                        }
+                        if (String(value) == '2') {
+                            return "Secondary"
+                        }
+
+                        return 'Undefined'
+                    }
+                },
+                methods: {
+                    submit: function(event) {
+                        let url = '/fxspot/counterparty-delete'
+                        let data = JSON.stringify({'counterparty': this.deleted_counterparties, })
+                        let error_msg = 'ops...! An error has occurred on Counterparties PUT call!'
+                        submitData(url, data, error_msg)
+                        this.deleted_counterparties = []
+                    },
+                    popup_edit: function(cnpj) {
+                        var myWindow = window.open("/fxspot/counterparty-data-edit/" + cnpj, "", "width=800,height=500");
+                    },
+                    popup_add: function() {
+                        var myWindow = window.open("/fxspot/counterparty-data-add", "", "width=800,height=500");
+                    },
+                    edit_item: function(event) {
+                        let index = Number(event.srcElement.id.substr('tb-edit-'.length))
+                        this.popup_edit(this.counterparties[index].Cnpj)
+                    },
+                    add_item: function() {
+                        this.popup_add()
+                    },
+                    remove_item: function(event) {
+                        let index = Number(event.srcElement.id.substr('tb-'.length))
+                        let cp = this.counterparties[index]
+                        let cp_name = cp.Counterparty
+                        let cp_includes_ndf = cp.Products.includes("FXNDF")
+                        if (confirm("Are you sure you want to delete counterparty " + cp_name + "?")) {
+                            if (cp_includes_ndf) {
+                                if (confirm(cp_name + " trades FXNDF. Are you really sure you want to delete this counterparty?")) {
+                                    this.deleted_counterparties.push(this.counterparties[index].Cnpj)
+                                    this.counterparties.splice(index, 1)
+                                    this.onchange_value(undefined)
+                                }
+                            } else {
+                                this.deleted_counterparties.push(this.counterparties[index].Cnpj)
+                                this.counterparties.splice(index, 1)
+                                this.onchange_value(undefined)
+                            }
+                        }
+                    },
+                }
+            });
+
+            groups_vue_obj = new SimpleApplyConfig({
+                el: '#tab-groups',
+                delimiters: ["<%","%>"],
+                data: {
+                    spot_groups: {{ spot_groups|safe }},
+                    ndf_groups: {{ ndf_groups|safe }},
+                    deleted_spot_groups: [],
+                    deleted_ndf_groups: []
+                },
+                filters: {
+
+                },
+                methods: {
+                    submit: function(event) {
+                        if(this.deleted_spot_groups.length) {
+                            let url = '/fxspot/group-delete/spot'
+                            let data = JSON.stringify({'group': this.deleted_spot_groups, })
+                            this.deleted_spot_groups.length = 0
+                            let error_msg = 'ops...! An error has occurred on Groups SPOT PUT call!'
+                            submitData(url, data, error_msg)
+                        }
+
+                        if(this.deleted_ndf_groups.length) {
+                            let url = '/fxspot/group-delete/ndf'
+                            let data = JSON.stringify({'group': this.deleted_ndf_groups, })
+                            this.deleted_ndf_groups.length = 0
+                            let error_msg = 'ops...! An error has occurred on Groups NDF PUT call!'
+                            submitData(url, data, error_msg)
+                        }
+                    },
+                    popup_edit: function(fxtype, alias) {
+                        var myWindow = window.open("/fxspot/group-edit/" + fxtype + '/' + alias, "", "width=800,height=540");
+                    },
+                    popup_add: function(fxtype) {
+                        var myWindow = window.open("/fxspot/group-add/" + fxtype, "", "width=800,height=540");
+                    },
+                    edit_item: function(event) {
+                        let id = event.srcElement.id
+                        let fxtype = id.substr(id.indexOf('-') + 1, id.lastIndexOf('-', id.lastIndexOf('-') - 1) - 3)
+                        let alias = id.substr(id.lastIndexOf('-') + 1)
+                        this.popup_edit(fxtype, alias)
+                    },
+                    add_item: function(event) {
+                        let id = event.srcElement.id
+                        let fxtype = id.substr(id.indexOf('-') + 1, id.lastIndexOf('-') - 'add'.length)
+                        this.popup_add(fxtype)
+                    },
+                    remove_ndf_item: function(event) {
+                        let alias = event.srcElement.id.substr('gr-ndf-del-'.length)
+                        this.deleted_ndf_groups.push(alias)
+                        delete this.ndf_groups[alias]
+                        this.onchange_value(undefined)
+                        this.$forceUpdate()
+                    },
+                    remove_spot_item: function(event) {
+                        let alias = event.srcElement.id.substr('gr-spot-del-'.length)
+                        if (confirm("Are you sure you want to delete FXSPOT group " + alias + "?")) {
+                            this.deleted_spot_groups.push(alias)
+                            delete this.spot_groups[alias]
+                            this.onchange_value(undefined)
+                            this.$forceUpdate()
+                        }
+                    },
+                }
+            });
+
+            currencies_vue_obj = new SimpleApplyConfig({
+                el: '#tab-currencies',
+                delimiters: ["<%","%>"],
+                data: {
+                    currencies: {{ currencies|safe }},
+                    available_currency_types: ['A', 'B'],
+                    sorted_currencies: {{ sorted_currencies|safe }}
+                },
+                filters: {
+
+                },
+                methods: {
+                    open_popup: function(currency) {
+                        open_a_currency_popup(currency)
+                    },
+
+                    submit: function(event) {
+                        console.log('submitting now...!')
+                        let url = '/fxspot/currencies-put'
+                        let data = JSON.stringify({'currencies': this.currencies, })
+                        let error_msg = 'ops...! An error has occurred on Currencies PUT call!'
+                        submitData(url, data, error_msg)
+                    },
+                },
+                beforeMount() {
+                    this.sorted_currencies.unshift('BRL') // Putting Brazilian Real into the ordered currencies array. 
+                },
+            });
+
+            system_vue_obj = new SimpleApplyConfig({
+                el: '#tab-system',
+                delimiters: ["<%","%>"],
+                data: {
+                    log_level: ["OFF", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"],
+                },
+                filters: {
+
+                },
+                methods: {
+                    submit: function(event) {
+                        let url = '/fxspot/bpipe_log_level'
+                        let data = JSON.stringify({'log_level': event.srcElement.value})
+                        let error_msg = 'ops...! An error has occurred on Log PUT call!'
+                        submitData(url, data, error_msg)
+                    },
+                },
+            });
+
+            $("#idApplyChanges").click(() => {
+                let vue_arr = [counterparties_vue_obj, 
+                               groups_vue_obj,
+                               currencies_vue_obj, 
+                               system_vue_obj]
+
+                for (var ind in vue_arr) {
+                    vue_arr[ind].save()
+                }
+            })
+        });
+
+        var open_a_currency_popup = function(currency) {
+            var myWindow = window.open('/fxspot/currency-calendar-view/' + currency, "", "width=800,height=640");
+        }
+
+    </script>
+
+    <style>
+        .min-content-width {
+            width: min-content !important;
+        }
+
+        select {
+            background: transparent;
+            text-align-last:center;
+        }
+
+        select > option {
+            background-color: #FF9E2A;
+            color: black;
+        }
+
+        .txtstrongsuccess {
+            color: #00bc8c !important;
+        }
+    </style>
+{% endblock %}
+
+{% block halt %}
+
+{% endblock %}
+
+{% block main %}
+    <div class="container-fluid">
+        <div class="row">
+            &nbsp;
+        </div>
+
+        <ul id="id_ul_tabs" class="nav nav-tabs small">
+            <!--
+            <li class="nav-item" v-for="(tab, idx) in myTabs">
+                <a :id="tab.id" class="nav-link" data-toggle="tab" style="border: 1px solid gray; border-bottom: 0px;" :href="tab.href" ref="tab.ref">[[ tab.name ]]</a>
+            </li>-->
+            <li class="nav-item">
+                <a class="nav-link active" data-toggle="tab" href="#tab-legal-entities">Legal Entities</a>
+            </li>
+            {# <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#tab-fx-ndf">FX NDF</a>
+            </li> #}
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#tab-currencies">Currencies</a>
+            </li>
+           <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#tab-system">System</a>
+            </li>
+        </ul>
+
+        <div class="row tab-content m-0">
+            <div class="col-12 tab-pane container active" id="tab-legal-entities">
+                <div class="row">
+                    &nbsp;
+                </div>
+
+                <ul id="id_ul_tabs_legal_entities" class="nav nav-tabs small">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-toggle="tab" href="#tab_counterparties">Counterparties</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#tab-groups">Groups</a>
+                    </li>
+                </ul>
+
+                <div class="tab-content d-block">
+                    <div class="col-12 tab-pane container mb-3 active overflow-auto" id="tab_counterparties">
+                        <div class="col-md-6 ml-0 pl-0 mb-3">
+                            <button type='button' id="add_counterparty" class="btn btn-sm small mt-4 bg-orange text-white" v-on:click="add_item">+ Counterparty </button >
+                        </div>
+
+                        <div class="mb-3">
+                            <table id="table_counterparties" class="table table-bordered table-sm small">
+                                <thead>
+                                    <tr class="header text-center table-th-25">
+                                        <th scope="col" style="min-width: 25%" >Alias</th>
+                                        <th scope="col" style="min-width: 25%" >Counterparty Name</th>
+                                        <th scope="col" style="min-width: 10%" >CNPJ</th>
+                                        <th scope="col" style="min-width: 8%" >Market Type</th>
+                                        <th scope="col" style="min-width: 8%" >Default Transaction</th>
+                                        <th scope="col" style="min-width: 8%" >FX SPOT</th>
+                                        <th scope="col" style="min-width: 8%" >FX NDF</th>
+                                        <th scope="col" style="min-width: 8%" >Edit</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="text-center" v-for="(counterparty, ind) in counterparties" scope="row">
+                                        <td><% counterparty.Alias %></td>
+                                        <td><% counterparty.Counterparty %></td>
+                                        <td><% counterparty.Cnpj|formatCNPJ %></td>
+                                        <td>
+                                            <template v-if="counterparty.Products.includes('FXSPOT')">
+                                                <template v-for="(val, key) in market_type_data" v-if="counterparty.MarketType == key"><% val %>
+                                                </template>
+                                            </template>
+                                        </td>
+                                        <td>
+                                            <% counterparty.DefaultTransaction %>
+                                        </td>
+                                        <td>
+                                            <% counterparty.Products.includes('FXSPOT') ? '&#10003;' : '' %>
+                                        </td>
+                                        <td>
+                                            <% counterparty.Products.includes('FXNDF') ? '&#10003;' : '' %>
+                                        </td>
+                                        <td>
+                                            <a href="#" class="bg-transparent" :id="'tb-edit-' + ind" v-on:click="edit_item">EDIT</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>        
+                        </div>
+                    </div>
+
+                    <div class="col-12 tab-pane container mb-3" id="tab-groups">
+                        <div class="col-md-6 ml-0 pl-0 mb-3">
+                            <button type='button' id="gr-spot-add" class="btn btn-sm small mt-4 bg-orange text-white" v-on:click="add_item">+ Group </button >
+                        </div>
+
+                        <div class="mb-3">
+                            <table class="table table-bordered table-sm small mt-4" id="table_groups">
+                                <thead class="text-center">
+                                    <tr>
+                                        <th scope="col" style="min-width: 40%" >Alias</th>
+                                        <th scope="col" style="min-width: 40%" >Name</th>
+                                        <th scope="col" style="min-width: 40%" >Delete</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-center">
+                                    <tr v-for="(data, alias) in spot_groups" scope="row">
+                                        <td><a href="#" :id="'gr-spot-edit-' + alias" v-on:click="edit_item"><% alias %></a></td>
+                                        <td><% data.Name %></td>
+                                        <td>
+                                            <a href="#" :id="'gr-spot-del-' + alias" v-on:click="remove_spot_item">DELETE</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 tab-pane container fade mb-3" id="tab-currencies">
+                <div class="col-md-8">
+                    <table class="table table-bordered table-hover table-sm small mt-4 text-center">
+                        <thead>
+                            <tr class="header text-center">
+                                <th>Currency</th>
+                                <th>Type</th>
+                                <th>Name</th>
+                                <th>Precision</th>
+                                <th>View Priority</th>
+                                <th class="w-auto text-nowrap">Holiday Calendar</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-orange">
+                            <tr v-for="(ccy, idx) in sorted_currencies">
+                                <th class="text-center h-auto">
+                                    <% ccy %>
+                                </th>
+                                <td>
+                                    <select v-model="currencies[ccy].Type" class="form-control form-control-sm default-select text-last-center h-auto" v-on:input="onchange_value">
+                                        <option v-for="cur_item in available_currency_types" :value="cur_item" :selected="cur_item == currencies[ccy].Type"><% cur_item %></option>
+                                    </select>
+                                </td>
+                                <td class="text-center w-auto">
+                                    <input v-on:input="onchange_value" v-model="currencies[ccy].Name"class="border-0 text-center input_spread bg-transparent w-100">
+                                </td>
+                                <td class="text-center w-auto">
+                                    <input v-on:input="onchange_value" v-model="currencies[ccy].Precision"class="border-0 text-center input_spread bg-transparent w-100">
+                                </td>
+                                <td class="text-center w-auto">
+                                    <input v-on:input="onchange_value" v-model="currencies[ccy].ViewPriority"class="border-0 text-center input_spread bg-transparent w-100" :disabled="ccy.trim() === 'BRL'">
+                                </td>
+                                <td class="text-center w-auto">
+                                    <template>
+                                        <a href="#" v-on:click="open_popup(ccy)">
+                                            <% currencies[ccy].Calendar %>
+                                        </a>
+                                    </template>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-12 tab-pane container fade mb-3" id="tab-system">
+                <div class="col-sm-2">
+                    <table class="table table-bordered table-hover table-sm small mt-4 text-center">
+                        <thead>
+                            <tr class="header text-center">
+                                <th>BPIPE Log Level</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-orange">
+                            <tr>
+                                <td>
+                                    <select class="form-control" v-on:input="submit">
+                                        <option v-for="(level, key) in log_level" :id="'log_level-' + key" :value="level"> <% level %> </option>
+                                    </select>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script_eof %}
+<link rel="stylesheet" type="text/css" href="/static/DataTables/datatables.min.css"/>
+<script type="text/javascript" src="/static/DataTables/datatables.min.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#nav-items li').removeClass('active');
+        $('#nav-item-config').addClass('active');
+
+        $('#table_groups').DataTable({
+            "paging":         false,
+            "order":          [[ 0, 'asc']],
+            "ordering":       true,
+            "info":           false,
+            "searching":      true,
+            "fixedHeader":    true,
+            "scrollCollapse": true,
+            "scrollY":        "40vh",
+            "columnDefs": [
+                {"orderable": false, "targets": 2},
+            ],
+        });
+
+        $('#table_counterparties').DataTable({
+            "paging":         false,
+            "order":          [[ 0, 'asc']],
+            "ordering":       true,
+            "info":           false,
+            "searching":      true,
+            "fixedHeader":    true,
+            "scrollCollapse": true,
+            "scrollY":        "40vh",
+            "columnDefs": [
+                {"orderable": false, "targets": [2, 7]},
+            ],
+        });
+    });
+</script>
+{% endblock %}
+
